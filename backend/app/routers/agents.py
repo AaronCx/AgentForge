@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.database import supabase
 from app.models.agent import AgentCreate, AgentResponse, AgentUpdate
 from app.routers.auth import get_current_user
+from app.services.rate_limiter import limiter
 
 router = APIRouter(tags=["agents"])
 
@@ -35,13 +36,17 @@ async def get_agent(
 
 
 @router.post("/agents", response_model=AgentResponse, status_code=201)
+@limiter.limit("20/hour")
 async def create_agent(
     agent: AgentCreate,
+    request: Request,
     user=Depends(get_current_user),  # noqa: B008
 ):
     data = agent.model_dump()
     data["user_id"] = user.id
     result = supabase.table("agents").insert(data).execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to create agent")
     return result.data[0]
 
 
@@ -57,6 +62,8 @@ async def update_agent(
 
     update_data = agent.model_dump(exclude_none=True)
     result = supabase.table("agents").update(update_data).eq("id", agent_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to update agent")
     return result.data[0]
 
 

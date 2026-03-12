@@ -68,6 +68,8 @@ async def run_agent(
         "input_text": input_text,
         "status": "running",
     }).execute()
+    if not run_result.data:
+        raise HTTPException(status_code=500, detail="Failed to create run")
     run_id = run_result.data[0]["id"]
 
     # Create heartbeat for live monitoring
@@ -125,6 +127,9 @@ async def run_agent(
             yield f"data: {json.dumps({'type': 'done', 'run_id': run_id})}\n\n"
 
         except Exception as e:
+            import logging
+            logging.getLogger(__name__).exception("Agent run %s failed", run_id)
+
             supabase.table("runs").update({
                 "status": "failed",
                 "output": str(e),
@@ -135,7 +140,7 @@ async def run_agent(
                 with contextlib.suppress(Exception):
                     heartbeat_service.fail(heartbeat_id)
 
-            yield f"data: {json.dumps({'type': 'error', 'data': str(e)})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'data': 'Agent execution failed. Check run details for more info.'})}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
