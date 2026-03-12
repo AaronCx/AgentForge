@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { api, Agent } from "@/lib/api";
+import { isDemoMode, DEMO_AGENTS } from "@/lib/demo-data";
 import { AgentBuilder } from "@/components/agents/AgentBuilder";
 
 export default function EditAgentPage() {
@@ -13,6 +14,14 @@ export default function EditAgentPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (isDemoMode()) {
+      const demo = DEMO_AGENTS.find((a) => a.id === params.id) as Agent | undefined;
+      setAgent(demo || null);
+      if (!demo) setError("Agent not found");
+      setLoading(false);
+      return;
+    }
+
     async function load() {
       const { data } = await supabase.auth.getSession();
       if (!data.session) return;
