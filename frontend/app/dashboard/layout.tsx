@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { isDemoMode } from "@/lib/demo-data";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
@@ -27,6 +28,10 @@ export default function DashboardLayout({
   const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
+    if (isDemoMode()) {
+      setUserEmail("demo@agentforge.dev");
+      return;
+    }
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) {
         router.push("/login");

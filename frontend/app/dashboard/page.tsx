@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { RunHistory } from "@/components/dashboard/RunHistory";
+import { isDemoMode, DEMO_STATS } from "@/lib/demo-data";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -18,6 +19,12 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (isDemoMode()) {
+      setStats(DEMO_STATS);
+      setLoading(false);
+      return;
+    }
+
     async function loadStats() {
       const { data } = await supabase.auth.getSession();
       if (!data.session) return;
