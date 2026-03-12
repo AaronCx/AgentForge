@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-03-12
+
+### Added
+
+- Agent messages table for inter-agent communication with typed messages
+- Messaging service with send, broadcast, get_messages, and get_conversation methods
+- Message API routes: POST /messages, GET /messages/{group_id}, GET /messages/{group_id}/conversation
+- Orchestrator now sends info/handoff/response messages during task execution
+- MessageFeed component with type filtering and auto-polling
+- Orchestrate page shows agent message feed after completion
+- CLI `messages list` and `messages conversation` commands
+- 6 message endpoint tests
+
+### Changed
+
+- Orchestrator integrates messaging for start/handoff/completion events
+
 ## [0.5.0] - 2026-03-12
 
 ### Added
