@@ -2,8 +2,8 @@
 
 from unittest.mock import MagicMock
 
-from tests.conftest import _mock_supabase_client
 from app.services.token_tracker import TokenTracker, calculate_cost
+from tests.conftest import _mock_supabase_client
 
 
 class TestCalculateCost:

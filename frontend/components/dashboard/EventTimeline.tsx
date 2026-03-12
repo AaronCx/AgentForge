@@ -44,7 +44,7 @@ export function EventTimeline({ events }: EventTimelineProps) {
     ? events.filter((e) => e.agent_name === filter)
     : events;
 
-  const uniqueAgents = [...new Set(events.map((e) => e.agent_name))];
+  const uniqueAgents = Array.from(new Set(events.map((e) => e.agent_name)));
 
   function formatTime(iso: string) {
     const d = new Date(iso);

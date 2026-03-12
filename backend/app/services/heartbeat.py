@@ -22,7 +22,7 @@ class HeartbeatService:
             "cost_estimate": 0,
             "output_preview": "",
         }).execute()
-        return result.data[0]["id"]
+        return str(result.data[0]["id"])
 
     def update(
         self,
@@ -35,7 +35,7 @@ class HeartbeatService:
         output_preview: str | None = None,
     ):
         """Update a heartbeat with current progress."""
-        data = {}
+        data: dict[str, str | int | float] = {}
         if state is not None:
             data["state"] = state
         if current_step is not None:
@@ -93,14 +93,14 @@ class HeartbeatService:
         """Get aggregate dashboard metrics."""
         active = (
             supabase.table("agent_heartbeats")
-            .select("id", count="exact")
+            .select("id", count="exact")  # type: ignore[arg-type]
             .in_("state", ["starting", "running"])
             .execute()
         )
 
         all_today = (
             supabase.table("agent_heartbeats")
-            .select("tokens_used, cost_estimate", count="exact")
+            .select("tokens_used, cost_estimate", count="exact")  # type: ignore[arg-type]
             .gte("created_at", datetime.now(UTC).replace(hour=0, minute=0, second=0).isoformat())
             .execute()
         )
@@ -108,7 +108,7 @@ class HeartbeatService:
         tokens_today = sum(r.get("tokens_used", 0) for r in (all_today.data or []))
         cost_today = sum(float(r.get("cost_estimate", 0)) for r in (all_today.data or []))
 
-        total_agents = supabase.table("agents").select("id", count="exact").execute()
+        total_agents = supabase.table("agents").select("id", count="exact").execute()  # type: ignore[arg-type]
 
         return {
             "active_runs": active.count or 0,

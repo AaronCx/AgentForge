@@ -2,8 +2,8 @@
 
 from unittest.mock import MagicMock
 
-from tests.conftest import _mock_supabase_client
 from app.services.heartbeat import HeartbeatService
+from tests.conftest import _mock_supabase_client
 
 
 class TestHeartbeatService:

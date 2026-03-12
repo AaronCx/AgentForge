@@ -27,11 +27,11 @@ class AgentRunner:
     """Executes agent workflows step-by-step using LangChain with tool integration."""
 
     def __init__(self):
-        self.llm = ChatOpenAI(
+        self.llm = ChatOpenAI(  # type: ignore[call-arg]
             model="gpt-4o-mini",
             temperature=0,
             streaming=True,
-            api_key=os.getenv("OPENAI_API_KEY", ""),
+            api_key=os.getenv("OPENAI_API_KEY", ""),  # type: ignore[arg-type]
         )
 
     def _resolve_tools(self, tool_names: list[str]):
@@ -133,7 +133,7 @@ class AgentRunner:
 
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=messages,
+            messages=messages,  # type: ignore[arg-type]
             temperature=0,
         )
 

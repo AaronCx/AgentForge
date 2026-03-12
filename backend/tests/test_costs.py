@@ -1,6 +1,6 @@
 """Tests for cost API endpoints."""
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 
 def test_cost_summary_requires_auth(client):

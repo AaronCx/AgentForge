@@ -1,5 +1,7 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+
 from app.services.agent_executor import AgentRunner
 
 

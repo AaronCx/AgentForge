@@ -206,10 +206,10 @@ class Orchestrator:
             task_results = await asyncio.gather(*coros, return_exceptions=True)
 
             for result in task_results:
-                if isinstance(result, Exception):
+                if isinstance(result, BaseException):
                     yield {"type": "error", "data": str(result)}
                     continue
-                idx, output = result
+                idx, output = result  # type: ignore[misc]
                 results[idx] = output
                 completed.add(idx)
                 yield {

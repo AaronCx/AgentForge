@@ -142,14 +142,14 @@ async def run_agent(
 async def get_stats(
     user=Depends(get_current_user),  # noqa: B008
 ):
-    agents = supabase.table("agents").select("id", count="exact").eq("user_id", user.id).execute()
-    runs = supabase.table("runs").select("tokens_used", count="exact").eq("user_id", user.id).execute()
+    agents = supabase.table("agents").select("id", count="exact").eq("user_id", user.id).execute()  # type: ignore[arg-type]
+    runs = supabase.table("runs").select("tokens_used", count="exact").eq("user_id", user.id).execute()  # type: ignore[arg-type]
 
     total_tokens = sum(r.get("tokens_used", 0) for r in (runs.data or []))
 
     # Count runs in the last hour
     one_hour_ago = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
-    recent_runs = supabase.table("runs").select("id", count="exact").eq("user_id", user.id).gte("created_at", one_hour_ago).execute()
+    recent_runs = supabase.table("runs").select("id", count="exact").eq("user_id", user.id).gte("created_at", one_hour_ago).execute()  # type: ignore[arg-type]
 
     return {
         "total_agents": agents.count or 0,

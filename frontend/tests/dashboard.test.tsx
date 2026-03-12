@@ -32,6 +32,7 @@ describe("MetricsBar", () => {
 
     render(
       <MetricsBar
+        loading={false}
         metrics={{
           active_runs: 3,
           total_agents: 10,
@@ -54,6 +55,7 @@ describe("MetricsBar", () => {
 
     render(
       <MetricsBar
+        loading={false}
         metrics={{
           active_runs: 0,
           total_agents: 0,
@@ -78,12 +80,14 @@ describe("AgentStatusGrid", () => {
       {
         id: "hb1",
         agent_id: "a1",
+        run_id: null,
         state: "running",
         current_step: 2,
         total_steps: 5,
         tokens_used: 100,
         cost_estimate: 0.01,
         output_preview: "Processing...",
+        updated_at: "2026-03-12T10:00:00Z",
         agents: { name: "TestAgent", description: "A test agent", tools: [] },
       },
     ];
@@ -114,24 +118,30 @@ describe("EventTimeline", () => {
     const events = [
       {
         id: "e1",
+        agent_id: "a1",
+        run_id: null,
         agent_name: "Agent Alpha",
         state: "completed",
-        severity: "success",
+        severity: "success" as const,
         current_step: 3,
         total_steps: 3,
         tokens_used: 200,
         cost_estimate: 0.01,
+        output_preview: "Done.",
         updated_at: "2026-03-12T10:00:00Z",
       },
       {
         id: "e2",
+        agent_id: "a2",
+        run_id: null,
         agent_name: "Agent Beta",
         state: "failed",
-        severity: "error",
+        severity: "error" as const,
         current_step: 1,
         total_steps: 3,
         tokens_used: 50,
         cost_estimate: 0.005,
+        output_preview: "",
         updated_at: "2026-03-12T09:00:00Z",
       },
     ];

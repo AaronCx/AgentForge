@@ -1,11 +1,13 @@
 """Message API routes for inter-agent communication."""
 
+from typing import cast
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from app.database import supabase
 from app.routers.auth import get_current_user
-from app.services.messaging import messaging_service
+from app.services.messaging import MessageType, messaging_service
 
 router = APIRouter(tags=["messages"])
 
@@ -41,7 +43,7 @@ async def send_message(
         group_id=body.group_id,
         sender_index=body.sender_index,
         receiver_index=body.receiver_index,
-        message_type=body.message_type,
+        message_type=cast(MessageType, body.message_type),
         content=body.content,
         metadata=body.metadata,
     )
@@ -72,7 +74,7 @@ async def get_messages(
     return messaging_service.get_messages(
         group_id,
         receiver_index=receiver_index,
-        message_type=message_type,
+        message_type=cast(MessageType, message_type) if message_type is not None else None,
         limit=limit,
     )
 
