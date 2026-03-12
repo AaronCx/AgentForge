@@ -36,8 +36,12 @@ class AgentRunner:
         """Resolve tool name strings to actual tool instances."""
         return [TOOL_REGISTRY[name] for name in tool_names if name in TOOL_REGISTRY]
 
-    async def execute(self, agent_config: dict, user_input: str) -> AsyncIterator[dict]:
+    async def execute(
+        self, agent_config: dict, user_input: str, *, heartbeat_id: str | None = None
+    ) -> AsyncIterator[dict]:
         """Execute an agent's workflow and yield streaming events."""
+        from app.services.heartbeat import heartbeat_service
+
         system_prompt = agent_config.get("system_prompt", "")
         tool_names = agent_config.get("tools", [])
         workflow_steps = agent_config.get("workflow_steps", [])
@@ -46,21 +50,45 @@ class AgentRunner:
         if not workflow_steps:
             workflow_steps = ["Process the user's input according to your instructions."]
 
+        if heartbeat_id:
+            heartbeat_service.update(
+                heartbeat_id, state="running", current_step=0
+            )
+
         yield {"type": "step", "content": f"Starting agent: {agent_config.get('name', 'Unnamed')}", "tokens": 0}
 
         accumulated_context = ""
+        total_tokens = 0
 
         for i, step in enumerate(workflow_steps, 1):
             yield {"type": "step", "content": f"Step {i}: {step}", "tokens": 0}
+
+            if heartbeat_id:
+                heartbeat_service.update(
+                    heartbeat_id, state="running", current_step=i
+                )
 
             if tools:
                 result = await self._execute_with_tools(system_prompt, step, user_input, accumulated_context, tools)
             else:
                 result = await self._execute_step(system_prompt, step, user_input, accumulated_context)
 
+            step_tokens = result.get("tokens", 0)
+            total_tokens += step_tokens
+
+            if heartbeat_id:
+                heartbeat_service.update(
+                    heartbeat_id,
+                    tokens_used=total_tokens,
+                    output_preview=result["content"][:500],
+                )
+
             accumulated_context += f"\n\n--- Step {i} result ---\n{result['content']}"
-            yield {"type": "token", "content": result["content"], "tokens": result.get("tokens", 0)}
+            yield {"type": "token", "content": result["content"], "tokens": step_tokens}
             yield {"type": "step", "content": f"Step {i} completed", "tokens": 0}
+
+        if heartbeat_id:
+            heartbeat_service.complete(heartbeat_id, tokens_used=total_tokens)
 
     async def _execute_with_tools(
         self, system_prompt: str, step: str, user_input: str, context: str, tools: list

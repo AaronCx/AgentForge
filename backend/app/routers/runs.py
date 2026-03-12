@@ -59,6 +59,15 @@ async def run_agent(
     }).execute()
     run_id = run_result.data[0]["id"]
 
+    # Create heartbeat for live monitoring
+    from app.services.heartbeat import heartbeat_service
+    workflow_steps = agent_config.get("workflow_steps", [])
+    total_steps = len(workflow_steps) if workflow_steps else 1
+    try:
+        heartbeat_id = heartbeat_service.start(agent_id, run_id, total_steps)
+    except Exception:
+        heartbeat_id = None
+
     async def event_stream():
         step_logs = []
         total_tokens = 0
@@ -67,7 +76,9 @@ async def run_agent(
 
         try:
             step_num = 0
-            async for event in agent_runner.execute(agent_config, input_text):
+            async for event in agent_runner.execute(
+                agent_config, input_text, heartbeat_id=heartbeat_id
+            ):
                 step_num += 1
                 step_start = time.time()
 
@@ -108,6 +119,12 @@ async def run_agent(
                 "output": str(e),
                 "step_logs": step_logs,
             }).eq("id", run_id).execute()
+
+            if heartbeat_id:
+                try:
+                    heartbeat_service.fail(heartbeat_id)
+                except Exception:
+                    pass
 
             yield f"data: {json.dumps({'type': 'error', 'data': str(e)})}\n\n"
 
