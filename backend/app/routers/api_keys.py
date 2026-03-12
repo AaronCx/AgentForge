@@ -1,11 +1,12 @@
 import hashlib
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.database import supabase
 from app.models.user import ApiKeyCreate, ApiKeyResponse
 from app.routers.auth import get_current_user
+from app.services.rate_limiter import limiter
 
 router = APIRouter(tags=["api_keys"])
 
@@ -18,9 +19,11 @@ async def list_keys(
     return result.data
 
 
-@router.post("/keys")
+@router.post("/keys", status_code=201)
+@limiter.limit("10/hour")
 async def create_key(
     body: ApiKeyCreate,
+    request: Request,
     user=Depends(get_current_user),  # noqa: B008
 ):
     raw_key = f"af_{secrets.token_urlsafe(32)}"
