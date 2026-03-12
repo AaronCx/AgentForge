@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { api, AgentCreate } from "@/lib/api";
+import { isDemoMode } from "@/lib/demo-data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +32,12 @@ export function AgentBuilder({ initialData, mode }: AgentBuilderProps) {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    if (isDemoMode()) {
+      setError("Saving agents is disabled in demo mode");
+      setLoading(false);
+      return;
+    }
 
     const { data } = await supabase.auth.getSession();
     if (!data.session) {
