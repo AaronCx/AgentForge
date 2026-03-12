@@ -52,7 +52,7 @@ class VirtualDisplay:
             proc.terminate()
             try:
                 await asyncio.wait_for(proc.wait(), timeout=5)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 proc.kill()
             return {"stopped": True, "display": f":{display_number}"}
         return {"stopped": False, "display": f":{display_number}"}

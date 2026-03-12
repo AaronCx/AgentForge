@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.services.computer_use.executor import execute, test_remote_connection
+from app.services.computer_use.executor import test_remote_connection
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ class DispatchService:
                 logger.warning("Health check failed for %s: %s", target_id, e)
 
         import datetime
-        target.last_health_check = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        target.last_health_check = datetime.datetime.now(datetime.UTC).isoformat()
 
         return {
             "id": target.id,

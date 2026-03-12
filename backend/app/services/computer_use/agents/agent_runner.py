@@ -7,7 +7,7 @@ import logging
 import re
 from typing import Any
 
-from app.config.agent_backends import AgentBackend, get_backend
+from app.config.agent_backends import get_backend
 from app.services.computer_use.executor import execute
 from app.services.computer_use.safety import check_rate_limit, log_action
 

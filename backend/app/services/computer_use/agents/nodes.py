@@ -6,7 +6,7 @@ import uuid
 from typing import Any
 
 from app.services.computer_use.agents.agent_runner import agent_runner
-from app.services.computer_use.safety import check_rate_limit, log_action
+from app.services.computer_use.safety import check_rate_limit
 
 
 async def execute_agent_spawn(config: dict, inputs: dict[str, Any]) -> dict[str, Any]:

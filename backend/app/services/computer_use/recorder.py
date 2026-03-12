@@ -105,7 +105,7 @@ class RecorderService:
             proc.terminate()
             try:
                 await asyncio.wait_for(proc.wait(), timeout=10)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 proc.kill()
 
         duration = time.time() - recording["start_time"]

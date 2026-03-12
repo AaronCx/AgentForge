@@ -19,7 +19,6 @@ from app.routers import (
     compare,
     computer_use,
     costs,
-    targets,
     dashboard,
     evals,
     knowledge,
@@ -31,6 +30,7 @@ from app.routers import (
     prompt_versions,
     providers,
     runs,
+    targets,
     traces,
     triggers,
 )

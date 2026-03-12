@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import subprocess
 from typing import Any
 
 import httpx
@@ -56,7 +55,7 @@ async def run_local(binary: str, args: list[str], timeout: int = 30) -> dict[str
                 "stderr": errors if errors else None,
             }
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         return {
             "success": False,
             "output": f"Command timed out after {timeout}s",

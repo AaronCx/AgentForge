@@ -14,7 +14,7 @@ def _check_deps() -> None:
     try:
         import pyautogui  # noqa: F401
     except ImportError:
-        raise RuntimeError("pyautogui is required for Windows computer use: pip install pyautogui")
+        raise RuntimeError("pyautogui is required for Windows computer use: pip install pyautogui") from None
 
 
 async def windows_steer_see(target: str = "screen", region: str = "") -> dict[str, Any]:

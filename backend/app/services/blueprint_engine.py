@@ -15,10 +15,11 @@ from app.services.blueprint_nodes.context_assembly import assemble_context
 from app.services.blueprint_nodes.deterministic import DETERMINISTIC_EXECUTORS
 from app.services.blueprint_nodes.registry import NODE_REGISTRY
 from app.services.computer_use.agent_nodes import CU_AGENT_EXECUTORS
-from app.services.computer_use.drive.nodes import DRIVE_EXECUTORS
-from app.services.computer_use.steer.nodes import STEER_EXECUTORS
 from app.services.computer_use.agents.nodes import AGENT_CONTROL_EXECUTORS
+from app.services.computer_use.drive.nodes import DRIVE_EXECUTORS
 from app.services.computer_use.recorder import RECORDING_EXECUTORS
+from app.services.computer_use.steer.nodes import STEER_EXECUTORS
+from app.services.token_tracker import calculate_cost, token_tracker
 
 # Merge computer use executors into the dispatch tables
 _ALL_DETERMINISTIC = {
@@ -29,7 +30,6 @@ _ALL_DETERMINISTIC = {
     **RECORDING_EXECUTORS,
 }
 _ALL_AGENT = {**AGENT_EXECUTORS, **CU_AGENT_EXECUTORS}
-from app.services.token_tracker import calculate_cost, token_tracker
 
 logger = logging.getLogger(__name__)
 

@@ -41,7 +41,7 @@ async def execute_cu_planner(config: dict, inputs: dict[str, Any]) -> dict[str, 
     objective = config.get("objective") or inputs.get("objective", "")
     screen_text = inputs.get("text", "")
     elements = inputs.get("elements", [])
-    screenshot = inputs.get("screenshot_base64", "")
+    inputs.get("screenshot_base64", "")  # available for future multi-modal support
 
     system_prompt = (
         "You are a computer use planning agent. Given an objective and the current screen state, "

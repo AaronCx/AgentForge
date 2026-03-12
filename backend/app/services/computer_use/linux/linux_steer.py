@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-import os
+import contextlib
 import tempfile
 from typing import Any
 
@@ -114,10 +114,8 @@ async def linux_steer_hotkey(keys: str) -> dict[str, Any]:
 async def linux_steer_scroll(direction: str = "down", amount: int = 3, target: str = "") -> dict[str, Any]:
     """Scroll using xdotool click (button 4=up, 5=down)."""
     if target:
-        try:
+        with contextlib.suppress(RuntimeError):
             await _run(["wmctrl", "-a", target])
-        except RuntimeError:
-            pass
 
     button = "4" if direction == "up" else "5"
     for _ in range(amount):

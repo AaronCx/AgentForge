@@ -178,8 +178,8 @@ def grade_screenshot_match(actual: str, expected: str, config: dict[str, Any]) -
     threshold = float(config.get("threshold", 0.8))
 
     try:
-        from PIL import Image
         import imagehash
+        from PIL import Image
 
         img_actual = Image.open(actual)
         img_expected = Image.open(expected)

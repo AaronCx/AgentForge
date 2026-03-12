@@ -10,13 +10,7 @@ from typing import Any
 def get_platform() -> str:
     """Detect the current platform."""
     system = plat.system()
-    if system == "Darwin":
-        return "macos"
-    elif system == "Linux":
-        return "linux"
-    elif system == "Windows":
-        return "windows"
-    return "unknown"
+    return {"Darwin": "macos", "Linux": "linux", "Windows": "windows"}.get(system, "unknown")
 
 
 def get_capabilities() -> dict[str, Any]:

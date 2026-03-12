@@ -27,13 +27,13 @@ class TargetUpdate(BaseModel):
 
 
 @router.get("")
-async def list_targets(user: dict = Depends(get_current_user)):
+async def list_targets(user: dict = Depends(get_current_user)):  # noqa: B008
     """List all registered execution targets."""
     return dispatch_service.list_targets()
 
 
 @router.post("")
-async def create_target(body: TargetCreate, user: dict = Depends(get_current_user)):
+async def create_target(body: TargetCreate, user: dict = Depends(get_current_user)):  # noqa: B008
     """Register a new execution target."""
     import uuid
     target_id = str(uuid.uuid4())
@@ -49,7 +49,7 @@ async def create_target(body: TargetCreate, user: dict = Depends(get_current_use
 
 
 @router.delete("/{target_id}")
-async def remove_target(target_id: str, user: dict = Depends(get_current_user)):
+async def remove_target(target_id: str, user: dict = Depends(get_current_user)):  # noqa: B008
     """Remove an execution target."""
     removed = dispatch_service.remove_target(target_id)
     if not removed:
@@ -58,13 +58,13 @@ async def remove_target(target_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("/{target_id}/health")
-async def health_check_target(target_id: str, user: dict = Depends(get_current_user)):
+async def health_check_target(target_id: str, user: dict = Depends(get_current_user)):  # noqa: B008
     """Run a health check on a specific target."""
     return await dispatch_service.health_check(target_id)
 
 
 @router.get("/capabilities")
-async def aggregated_capabilities(user: dict = Depends(get_current_user)):
+async def aggregated_capabilities(user: dict = Depends(get_current_user)):  # noqa: B008
     """Aggregated view of capabilities across all targets."""
     targets = dispatch_service.list_targets()
     all_caps: dict = {}
