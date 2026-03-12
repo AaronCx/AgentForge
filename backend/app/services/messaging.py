@@ -7,6 +7,13 @@ from app.database import supabase
 MessageType = Literal["info", "request", "response", "error", "handoff"]
 
 
+def _validate_index(value: int) -> int:
+    """Validate that an agent index is a safe integer."""
+    if not isinstance(value, int) or value < 0 or value > 999:
+        raise ValueError(f"Invalid agent index: {value}")
+    return value
+
+
 class MessagingService:
     """Handles message passing between agents within a task group."""
 
@@ -51,7 +58,8 @@ class MessagingService:
             .limit(limit)
         )
         if receiver_index is not None:
-            query = query.or_(f"receiver_index.eq.{receiver_index},receiver_index.is.null")
+            idx = _validate_index(receiver_index)
+            query = query.or_(f"receiver_index.eq.{idx},receiver_index.is.null")
         if message_type:
             query = query.eq("message_type", message_type)
 
@@ -66,13 +74,14 @@ class MessagingService:
         limit: int = 50,
     ) -> list[dict]:
         """Get messages exchanged between two specific agents."""
+        a, b = _validate_index(agent_a), _validate_index(agent_b)
         result = (
             supabase.table("agent_messages")
             .select("*")
             .eq("group_id", group_id)
             .or_(
-                f"and(sender_index.eq.{agent_a},receiver_index.eq.{agent_b}),"
-                f"and(sender_index.eq.{agent_b},receiver_index.eq.{agent_a})"
+                f"and(sender_index.eq.{a},receiver_index.eq.{b}),"
+                f"and(sender_index.eq.{b},receiver_index.eq.{a})"
             )
             .order("created_at")
             .limit(limit)
