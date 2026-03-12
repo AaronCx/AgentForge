@@ -77,6 +77,13 @@ export default function OrchestratePage() {
         signal: controller.signal,
       });
 
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        setEvents((prev) => [...prev, { type: "error", data: err.detail || `HTTP ${res.status}` }]);
+        setRunning(false);
+        return;
+      }
+
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -166,9 +173,23 @@ export default function OrchestratePage() {
                 ))}
               </div>
             </div>
-            <Button type="submit" disabled={running || !objective.trim()}>
-              {running ? "Running..." : "Start Orchestration"}
-            </Button>
+            <div className="flex gap-2">
+              <Button type="submit" disabled={running || !objective.trim()}>
+                {running ? "Running..." : "Start Orchestration"}
+              </Button>
+              {running && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    abortRef.current?.abort();
+                    setRunning(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+              )}
+            </div>
           </form>
         </CardContent>
       </Card>
