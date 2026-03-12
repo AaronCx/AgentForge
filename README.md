@@ -12,7 +12,7 @@ Build custom AI agents that chain LLM calls, search the web, parse documents, ex
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python)
 ![Bun](https://img.shields.io/badge/Bun-1.2-000000?logo=bun)
-![Backend Tests](https://img.shields.io/badge/backend_tests-84_passing-brightgreen)
+![Backend Tests](https://img.shields.io/badge/backend_tests-104_passing-brightgreen)
 ![Frontend Tests](https://img.shields.io/badge/frontend_tests-21_passing-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-66%25-yellow)
 
@@ -38,10 +38,15 @@ Agents communicate via typed messages (info, request, response, error, handoff) 
 ### Cost Analytics
 Track token usage per agent, model, and run. Get daily/weekly/monthly summaries, breakdown reports by agent or model, per-run step-by-step usage, and monthly cost projections.
 
+### Blueprint System (v1.1.0)
+Visual DAG workflow builder combining deterministic code nodes with LLM-powered agent nodes. Drag-and-drop React Flow editor, topological execution engine with concurrent layer resolution, context assembly pipeline, retry policies, and SSE-streamed execution traces.
+
 ### CLI
-Full command-line interface with live TUI dashboard, agent management, orchestration, message viewing, and cost analysis.
+Full command-line interface with live TUI dashboard, agent management, blueprint management, orchestration, message viewing, and cost analysis.
 
 ### Pre-built Templates
+
+#### Agent Templates
 
 | Agent | Description | Tools Used |
 |-------|-------------|------------|
@@ -49,6 +54,16 @@ Full command-line interface with live TUI dashboard, agent management, orchestra
 | **Research Agent** | Topic → web search, synthesis, structured report | web_search, summarizer |
 | **Data Extractor** | Unstructured text → clean JSON with entities and relationships | data_extractor |
 | **Code Reviewer** | Code → bug, security, and performance review with severity ratings | code_executor |
+
+#### Blueprint Templates
+
+| Blueprint | Nodes | Description |
+|-----------|-------|-------------|
+| **Document Analyzer** | 5 | fetch_document → text_splitter → llm_extract → json_validator → output_formatter |
+| **Research Report** | 7 | 3× fetch_url (parallel) → text_splitter → llm_summarize → llm_generate → output_formatter |
+| **Code Review** | 4 | template_renderer → llm_review → json_validator → output_formatter |
+| **Data Extraction Pipeline** | 5 | fetch_document → text_splitter → llm_extract → json_validator → output_formatter |
+| **Content Generator** | 5 | template_renderer → llm_generate → run_linter → llm_generate → output_formatter |
 
 ### Tools Library
 
@@ -76,6 +91,7 @@ graph TB
         API[REST API]
         Executor[Agent Executor]
         Orchestrator[Orchestrator]
+        BlueprintEngine[Blueprint Engine]
         Messaging[Messaging Service]
         Tools[Tool Registry]
         Stream[SSE Streaming]
@@ -94,6 +110,8 @@ graph TB
     API --> RL
     API --> Executor
     API --> Orchestrator
+    API --> BlueprintEngine
+    BlueprintEngine --> Executor
     Orchestrator --> Executor
     Orchestrator --> Messaging
     Executor --> Tools
@@ -150,6 +168,7 @@ supabase/migrations/005_agent_heartbeats.sql
 supabase/migrations/006_token_usage.sql
 supabase/migrations/007_hierarchy.sql
 supabase/migrations/008_agent_messages.sql
+supabase/migrations/20260312_blueprints.sql
 ```
 
 ### 3. Set up the backend
@@ -301,6 +320,21 @@ Authorization: Bearer <supabase-access-token>
 | `GET` | `/api/costs/run/:id` | Per-run token usage |
 | `GET` | `/api/costs/projection` | Monthly cost projection |
 
+#### Blueprints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/blueprints` | List your blueprints |
+| `GET` | `/api/blueprints/templates` | List pre-built blueprint templates |
+| `GET` | `/api/blueprints/node-types` | List available node types |
+| `GET` | `/api/blueprints/:id` | Get blueprint details |
+| `POST` | `/api/blueprints` | Create a blueprint |
+| `PUT` | `/api/blueprints/:id` | Update a blueprint |
+| `DELETE` | `/api/blueprints/:id` | Delete a blueprint |
+| `POST` | `/api/blueprints/:id/run` | Execute a blueprint (SSE stream) |
+| `GET` | `/api/blueprints/runs/:run_id` | Get execution trace |
+| `GET` | `/api/blueprints/:id/runs` | List runs for a blueprint |
+
 #### API Keys
 
 | Method | Path | Description |
@@ -328,6 +362,18 @@ agentforge agents list
 
 # Run an agent
 agentforge agents run <agent-id> --input "Your text here"
+
+# List blueprints
+agentforge blueprints list
+
+# View blueprint templates
+agentforge blueprints templates
+
+# Inspect a blueprint's node graph
+agentforge blueprints inspect <blueprint-id>
+
+# Run a blueprint
+agentforge blueprints run <blueprint-id> --input "Your text here"
 
 # Start orchestration
 agentforge orchestrate "Research AI agent frameworks and compare their approaches"
@@ -366,11 +412,12 @@ bun run test
 agentforge/
 ├── frontend/               # Next.js 14 + TypeScript + Tailwind + shadcn/ui
 │   ├── app/                # App Router pages
-│   │   ├── dashboard/      # Dashboard, monitor, analytics, orchestrate, agents, runs, settings
+│   │   ├── dashboard/      # Dashboard, monitor, analytics, orchestrate, agents, blueprints, runs, settings
 │   │   ├── login/          # Auth pages
 │   │   └── signup/
 │   ├── components/         # UI components
 │   │   ├── agents/         # AgentCard, ToolSelector, WorkflowEditor
+│   │   ├── blueprints/     # NodePalette, BlueprintNode, ConfigPanel
 │   │   ├── dashboard/      # MetricsBar, AgentStatusGrid, EventTimeline, MessageFeed
 │   │   ├── runner/         # StepLog
 │   │   └── ui/             # shadcn/ui primitives
@@ -378,14 +425,14 @@ agentforge/
 │   └── tests/              # Vitest component tests
 ├── backend/                # FastAPI + LangChain + OpenAI
 │   ├── app/
-│   │   ├── routers/        # agents, runs, auth, api_keys, dashboard, costs, orchestration, messages
-│   │   ├── services/       # agent_executor, heartbeat, orchestrator, messaging, token_tracker, tools
+│   │   ├── routers/        # agents, runs, auth, api_keys, dashboard, costs, orchestration, messages, blueprints
+│   │   ├── services/       # agent_executor, heartbeat, orchestrator, messaging, token_tracker, tools, blueprint_engine, blueprint_nodes
 │   │   └── models/         # Pydantic models
 │   └── tests/              # pytest unit tests
 ├── cli/                    # Typer + Rich CLI
 │   ├── agentforge/         # main, client, config
 │   └── tests/              # CLI tests
-├── supabase/               # Database migrations (001-008)
+├── supabase/               # Database migrations (001-008 + blueprints)
 ├── .github/workflows/      # CI/CD pipeline
 └── docker-compose.yml      # Docker orchestration
 ```
