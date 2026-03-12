@@ -341,6 +341,181 @@ def orchestrate(
         raise typer.Exit(1)
 
 
+blueprints_app = typer.Typer(help="Manage blueprints")
+app.add_typer(blueprints_app, name="blueprints")
+
+
+@blueprints_app.command("list")
+def blueprints_list():
+    """List all your blueprints."""
+    try:
+        bps = client.get("/api/blueprints")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    if not bps:
+        console.print("[dim]No blueprints yet.[/dim]")
+        return
+
+    table = Table(title="Your Blueprints")
+    table.add_column("ID", style="dim", max_width=8)
+    table.add_column("Name", style="bold")
+    table.add_column("Nodes", justify="right")
+    table.add_column("Version", justify="right")
+    table.add_column("Updated")
+
+    for bp in bps:
+        table.add_row(
+            bp["id"][:8],
+            bp["name"],
+            str(len(bp.get("nodes", []))),
+            f"v{bp.get('version', 1)}",
+            bp.get("updated_at", "")[:10],
+        )
+
+    console.print(table)
+
+
+@blueprints_app.command("templates")
+def blueprints_templates():
+    """List available blueprint templates."""
+    try:
+        templates = client.get("/api/blueprints/templates")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    if not templates:
+        console.print("[dim]No templates available.[/dim]")
+        return
+
+    table = Table(title="Blueprint Templates")
+    table.add_column("Name", style="bold")
+    table.add_column("Description")
+    table.add_column("Nodes", justify="right")
+
+    for t in templates:
+        table.add_row(
+            t["name"],
+            t.get("description", "")[:60],
+            str(len(t.get("nodes", []))),
+        )
+
+    console.print(table)
+
+
+@blueprints_app.command("inspect")
+def blueprints_inspect(
+    blueprint_id: str = typer.Argument(..., help="Blueprint ID to inspect"),
+):
+    """Inspect a blueprint's node graph."""
+    try:
+        bp = client.get(f"/api/blueprints/{blueprint_id}")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"\n[bold]{bp['name']}[/bold] (v{bp.get('version', 1)})")
+    console.print(f"[dim]{bp.get('description', '')}[/dim]\n")
+
+    nodes = bp.get("nodes", [])
+    if not nodes:
+        console.print("[dim]No nodes.[/dim]")
+        return
+
+    table = Table(title=f"Nodes ({len(nodes)})")
+    table.add_column("ID", style="dim")
+    table.add_column("Type", style="bold")
+    table.add_column("Label")
+    table.add_column("Class")
+    table.add_column("Dependencies")
+
+    # Determine node class from type
+    agent_types = {"llm_generate", "llm_summarize", "llm_extract", "llm_review", "llm_implement"}
+    for node in nodes:
+        ntype = node.get("type", "")
+        nclass = "agent" if ntype in agent_types else "deterministic"
+        class_color = "purple" if nclass == "agent" else "blue"
+        deps = ", ".join(node.get("dependencies", [])) or "—"
+        table.add_row(
+            node["id"],
+            ntype,
+            node.get("label", ""),
+            f"[{class_color}]{nclass}[/{class_color}]",
+            deps,
+        )
+
+    console.print(table)
+
+    # Show execution order
+    console.print(f"\n[bold]Retry policy:[/bold] max {bp.get('retry_policy', {}).get('max_retries', 0)} retries")
+    if bp.get("tool_scope"):
+        console.print(f"[bold]Tool scope:[/bold] {', '.join(bp['tool_scope'])}")
+    console.print()
+
+
+@blueprints_app.command("run")
+def blueprints_run(
+    blueprint_id: str = typer.Argument(..., help="Blueprint ID to run"),
+    input_text: str = typer.Option("", "--input", "-i", help="Input text for the blueprint"),
+):
+    """Run a blueprint and stream execution progress."""
+    console.print(f"[bold]Running blueprint {blueprint_id[:8]}...[/bold]\n")
+
+    try:
+        for data_str in client.stream_sse_post(
+            f"/api/blueprints/{blueprint_id}/run",
+            json={"input_text": input_text},
+        ):
+            if data_str == "[DONE]":
+                break
+            try:
+                event = json.loads(data_str)
+                event_type = event.get("type", "")
+
+                if event_type == "status":
+                    console.print(f"[dim]{event.get('data', '')}[/dim]")
+
+                elif event_type == "layer_start":
+                    layer = event.get("data", {})
+                    node_ids = layer.get("node_ids", [])
+                    console.print(f"[yellow]▶ Layer {layer.get('layer', '?')}:[/yellow] {', '.join(node_ids)}")
+
+                elif event_type == "node_done":
+                    d = event.get("data", {})
+                    nid = d.get("node_id", "?")
+                    ms = d.get("duration_ms", 0)
+                    tokens = d.get("tokens", 0)
+                    tok_str = f" ({tokens:,} tokens)" if tokens else ""
+                    console.print(f"  [green]✓ {nid}[/green] {ms/1000:.1f}s{tok_str}")
+
+                elif event_type == "node_error":
+                    d = event.get("data", {})
+                    console.print(f"  [red]✗ {d.get('node_id', '?')}: {d.get('error', 'failed')}[/red]")
+
+                elif event_type == "result":
+                    d = event.get("data", {})
+                    console.print(f"\n[bold green]Blueprint complete[/bold green]")
+                    output = d.get("output", "")
+                    if isinstance(output, dict):
+                        console.print(Panel(json.dumps(output, indent=2), border_style="green"))
+                    elif output:
+                        console.print(Panel(str(output)[:2000], border_style="green"))
+                    run_id = d.get("run_id", "")
+                    if run_id:
+                        console.print(f"[dim]Run ID: {run_id}[/dim]")
+
+                elif event_type == "error":
+                    console.print(f"[red]Error: {event.get('data', 'Unknown error')}[/red]")
+
+            except json.JSONDecodeError:
+                pass
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
 messages_app = typer.Typer(help="View inter-agent messages")
 app.add_typer(messages_app, name="messages")
 

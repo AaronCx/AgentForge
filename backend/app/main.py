@@ -13,12 +13,14 @@ from app.database import supabase as supabase_client
 from app.routers import (
     agents,
     api_keys,
+    blueprints,
     costs,
     dashboard,
     messages,
     orchestration,
     runs,
 )
+from app.services.blueprint_templates import seed_blueprint_templates
 from app.services.rate_limiter import limiter
 from app.services.templates import seed_templates
 
@@ -33,13 +35,17 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await seed_templates(supabase_client)
     except Exception:
         logger.warning("Failed to seed templates — will retry on next startup", exc_info=True)
+    try:
+        await seed_blueprint_templates(supabase_client)
+    except Exception:
+        logger.warning("Failed to seed blueprint templates", exc_info=True)
     yield
 
 
 app = FastAPI(
     title="AgentForge API",
     description="AI workflow agent platform backend",
-    version="1.0.0",
+    version="1.1.0",
     lifespan=lifespan,
 )
 
@@ -63,11 +69,12 @@ app.include_router(dashboard.router, prefix="/api")
 app.include_router(costs.router, prefix="/api")
 app.include_router(orchestration.router, prefix="/api")
 app.include_router(messages.router, prefix="/api")
+app.include_router(blueprints.router, prefix="/api")
 
 
 @app.get("/")
 async def root():
-    return {"name": "AgentForge API", "version": "1.0.0", "status": "running"}
+    return {"name": "AgentForge API", "version": "1.1.0", "status": "running"}
 
 
 @app.get("/health")
