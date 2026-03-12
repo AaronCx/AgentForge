@@ -61,7 +61,7 @@ class Orchestrator:
             tasks = parsed.get("tasks", parsed) if isinstance(parsed, dict) else parsed
             if not isinstance(tasks, list):
                 tasks = [tasks]
-            return tasks
+            return list(tasks)
         except json.JSONDecodeError:
             return [{"description": objective, "role": "worker", "dependencies": [], "tools": available_tools}]
 
