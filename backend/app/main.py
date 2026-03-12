@@ -21,6 +21,7 @@ from app.routers import (
     runs,
 )
 from app.services.rate_limiter import limiter
+from app.services.blueprint_templates import seed_blueprint_templates
 from app.services.templates import seed_templates
 
 load_dotenv()
@@ -34,6 +35,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await seed_templates(supabase_client)
     except Exception:
         logger.warning("Failed to seed templates — will retry on next startup", exc_info=True)
+    try:
+        await seed_blueprint_templates(supabase_client)
+    except Exception:
+        logger.warning("Failed to seed blueprint templates", exc_info=True)
     yield
 
 
