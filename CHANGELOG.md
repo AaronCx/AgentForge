@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-03-12
+
+### Added
+
+- CODE_OF_CONDUCT.md (Contributor Covenant v2.1)
+- ruff.toml with project-wide Python lint configuration
+- mypy.ini for backend type checking
+- biome.json for frontend linting and formatting
+- Frontend test infrastructure (vitest + testing-library + jsdom)
+- 15 frontend component render tests (StatsCards, StepLog, ToolSelector, WorkflowEditor, AgentCard)
+- Backend test conftest.py with shared fixtures and Supabase mocking
+- 23 backend API tests covering all routes, auth guards, and edge cases
+
+### Changed
+
+- CI workflow updated to use Bun instead of npm for frontend
+- CI now runs mypy type checking for backend
+- CI now runs frontend tests as a separate job
+
 ## [0.1.0] - 2026-03-10
 
 ### Added
