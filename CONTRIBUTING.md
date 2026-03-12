@@ -4,8 +4,7 @@ Thank you for your interest in contributing to AgentForge! This guide will help 
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) (frontend package manager)
-- [Node.js 20+](https://nodejs.org) (production runtime)
+- [Bun](https://bun.sh) (frontend package manager and runtime)
 - [Python 3.12+](https://python.org)
 - A [Supabase](https://supabase.com) project (free tier works)
 - An [OpenAI API key](https://platform.openai.com)
@@ -28,16 +27,20 @@ supabase/migrations/001_users.sql
 supabase/migrations/002_agents.sql
 supabase/migrations/003_runs.sql
 supabase/migrations/004_api_keys.sql
+supabase/migrations/005_agent_heartbeats.sql
+supabase/migrations/006_token_usage.sql
+supabase/migrations/007_hierarchy.sql
+supabase/migrations/008_agent_messages.sql
 ```
 
 ### 3. Backend
 
 ```bash
 cd backend
-python -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pip install -r requirements-dev.txt
+pip install pytest pytest-asyncio pytest-cov ruff mypy
 
 cp .env.example .env
 # Fill in your API keys
@@ -57,7 +60,15 @@ cp .env.example .env.local
 bun run dev
 ```
 
-### 5. Run tests
+### 5. CLI (optional)
+
+```bash
+cd cli
+pip install -e .
+agentforge init
+```
+
+### 6. Run tests
 
 ```bash
 # Backend

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentforge-cli"
-version = "0.3.0"
+version = "1.0.0"
 description = "CLI client for AgentForge — AI workflow agent platform"
 readme = "../README.md"
 requires-python = ">=3.11"
