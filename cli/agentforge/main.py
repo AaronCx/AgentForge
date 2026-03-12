@@ -269,5 +269,54 @@ def agents_create(
         raise typer.Exit(1)
 
 
+@app.command()
+def costs(
+    breakdown: str = typer.Option("", "--breakdown", "-b", help="Breakdown by 'agent' or 'model'"),
+    period: str = typer.Option("today", "--period", "-p", help="Period: today, week, month"),
+):
+    """Show token usage and cost summary."""
+    try:
+        summary = client.get("/api/costs/summary", params={"period": period})
+        projection = client.get("/api/costs/projection")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    console.print()
+    console.print(f"[bold]Cost Summary ({period})[/bold]")
+    console.print(f"  Total cost:    [green]${summary['total_cost']:.4f}[/green]")
+    console.print(f"  Input tokens:  {summary['total_input_tokens']:,}")
+    console.print(f"  Output tokens: {summary['total_output_tokens']:,}")
+    console.print(f"  Requests:      {summary['request_count']}")
+    console.print()
+    console.print(f"[bold]Monthly Projection[/bold]")
+    console.print(f"  Daily avg:     ${projection['daily_average']:.4f}")
+    console.print(f"  Monthly est:   [yellow]${projection['monthly_projection']:.2f}[/yellow]")
+    console.print()
+
+    if breakdown:
+        try:
+            data = client.get("/api/costs/breakdown", params={"group_by": breakdown})
+        except Exception as e:
+            console.print(f"[red]Error: {e}[/red]")
+            raise typer.Exit(1)
+
+        table = Table(title=f"Breakdown by {breakdown}")
+        table.add_column("Name", style="bold")
+        table.add_column("Cost", justify="right")
+        table.add_column("Tokens", justify="right")
+        table.add_column("Requests", justify="right")
+
+        for entry in data:
+            table.add_row(
+                entry["name"],
+                f"${entry['cost']:.4f}",
+                f"{entry['input_tokens'] + entry['output_tokens']:,}",
+                str(entry["requests"]),
+            )
+
+        console.print(table)
+
+
 if __name__ == "__main__":
     app()
