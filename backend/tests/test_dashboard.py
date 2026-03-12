@@ -89,3 +89,54 @@ def test_dashboard_timeline(auth_client):
         )
         assert response.status_code == 200
         assert response.json() == []
+
+
+def test_dashboard_timeline_with_events(auth_client):
+    with patch("app.routers.dashboard.supabase") as mock_db:
+        mock_result = MagicMock()
+        mock_result.data = [
+            {
+                "id": "hb1", "agent_id": "a1", "run_id": "r1", "state": "running",
+                "current_step": 2, "total_steps": 5, "tokens_used": 100,
+                "cost_estimate": 0.01, "output_preview": "working...",
+                "updated_at": "2026-03-12T10:00:00Z",
+                "agents": {"name": "TestAgent"},
+            },
+            {
+                "id": "hb2", "agent_id": "a2", "run_id": "r2", "state": "failed",
+                "current_step": 1, "total_steps": 3, "tokens_used": 50,
+                "cost_estimate": 0.005, "output_preview": "error occurred",
+                "updated_at": "2026-03-12T09:00:00Z",
+                "agents": {"name": "FailedAgent"},
+            },
+            {
+                "id": "hb3", "agent_id": "a3", "run_id": "r3", "state": "completed",
+                "current_step": 3, "total_steps": 3, "tokens_used": 200,
+                "cost_estimate": 0.02, "output_preview": "done",
+                "updated_at": "2026-03-12T08:00:00Z",
+                "agents": None,
+            },
+            {
+                "id": "hb4", "agent_id": "a4", "run_id": "r4", "state": "stalled",
+                "current_step": 1, "total_steps": 2, "tokens_used": 10,
+                "cost_estimate": 0.001, "output_preview": "",
+                "updated_at": "2026-03-12T07:00:00Z",
+                "agents": {"name": "StalledAgent"},
+            },
+        ]
+        mock_db.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = mock_result
+
+        response = auth_client.get("/api/dashboard/timeline")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 4
+
+        # Check severity mapping
+        assert data[0]["severity"] == "info"      # running
+        assert data[1]["severity"] == "error"      # failed
+        assert data[2]["severity"] == "success"    # completed
+        assert data[3]["severity"] == "warning"    # stalled
+
+        # Check agent name fallback
+        assert data[0]["agent_name"] == "TestAgent"
+        assert data[2]["agent_name"] == "Unknown"
