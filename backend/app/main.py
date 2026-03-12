@@ -1,4 +1,4 @@
-import contextlib
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -50,10 +50,15 @@ app.include_router(orchestration.router, prefix="/api")
 app.include_router(messages.router, prefix="/api")
 
 
+logger = logging.getLogger(__name__)
+
+
 @app.on_event("startup")
 async def startup():
-    with contextlib.suppress(Exception):
-        await seed_templates(supabase_client)  # Templates will be seeded on next startup if DB isn't ready
+    try:
+        await seed_templates(supabase_client)
+    except Exception:
+        logger.warning("Failed to seed templates — will retry on next startup", exc_info=True)
 
 
 @app.get("/")
