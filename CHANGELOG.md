@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-03-12
+
+### Added
+
+- Agent hierarchy columns (parent_agent_id, agent_role, depth) on agents table
+- Task groups and task group members tables with RLS policies
+- Orchestrator service: LLM-based task decomposition with dependency graph execution
+- Orchestration API: SSE-streamed POST /orchestrate, group listing/detail/result endpoints
+- Orchestrate page with objective input, tool selection, live task plan visualization
+- Role-colored badges (coordinator/supervisor/worker/scout/reviewer) with state transitions
+- CLI `orchestrate` command with Rich-formatted task plan and streaming progress
+- 8 orchestration tests (endpoints + decompose logic)
+
+### Changed
+
+- Dashboard sidebar now includes Orchestrate nav item
+- CLI client supports POST-based SSE streaming
+
 ## [0.4.0] - 2026-03-12
 
 ### Added
