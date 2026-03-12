@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime, timedelta
 
+from app.config import DEFAULT_MODEL
 from app.database import supabase
 
 # Pricing per 1M tokens (USD)
@@ -11,8 +12,6 @@ MODEL_PRICING = {
     "gpt-4-turbo": {"input": 10.00, "output": 30.00},
     "gpt-3.5-turbo": {"input": 0.50, "output": 1.50},
 }
-
-DEFAULT_MODEL = "gpt-4o-mini"
 
 
 def calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float:

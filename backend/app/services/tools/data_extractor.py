@@ -3,6 +3,8 @@ import os
 from langchain.tools import tool
 from openai import AsyncOpenAI
 
+from app.config import DEFAULT_MODEL
+
 
 @tool
 async def data_extractor(text: str) -> str:
@@ -10,7 +12,7 @@ async def data_extractor(text: str) -> str:
     client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
 
     response = await client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=DEFAULT_MODEL,
         messages=[
             {
                 "role": "system",

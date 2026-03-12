@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 
 from openai import AsyncOpenAI
 
+from app.config import DEFAULT_MODEL
 from app.database import supabase
 from app.services.agent_executor import AgentRunner
 from app.services.messaging import messaging_service
@@ -32,7 +33,7 @@ class Orchestrator:
         tools_str = ", ".join(available_tools) if available_tools else "none"
 
         response = await self.llm.chat.completions.create(
-            model="gpt-4o-mini",
+            model=DEFAULT_MODEL,
             messages=[
                 {
                     "role": "system",
@@ -234,7 +235,7 @@ class Orchestrator:
 
         try:
             synthesis = await self.llm.chat.completions.create(
-                model="gpt-4o-mini",
+                model=DEFAULT_MODEL,
                 messages=[
                     {
                         "role": "system",

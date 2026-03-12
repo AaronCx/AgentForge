@@ -6,6 +6,7 @@ from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 
+from app.config import DEFAULT_MODEL
 from app.services.tools.code_executor import code_executor
 from app.services.tools.data_extractor import data_extractor
 from app.services.tools.document_reader import document_reader
@@ -28,7 +29,7 @@ class AgentRunner:
 
     def __init__(self):
         self.llm = ChatOpenAI(  # type: ignore[call-arg]
-            model="gpt-4o-mini",
+            model=DEFAULT_MODEL,
             temperature=0,
             streaming=True,
             api_key=os.getenv("OPENAI_API_KEY", ""),  # type: ignore[arg-type]
