@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { api } from "@/lib/api";
+import { api, Blueprint } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { RunHistory } from "@/components/dashboard/RunHistory";
 import { isDemoMode, DEMO_STATS } from "@/lib/demo-data";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -16,6 +18,7 @@ export default function DashboardPage() {
     total_tokens: 0,
     runs_this_hour: 0,
   });
+  const [blueprints, setBlueprints] = useState<Blueprint[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,8 +33,12 @@ export default function DashboardPage() {
       if (!data.session) return;
 
       try {
-        const s = await api.stats.get(data.session.access_token);
+        const [s, bps] = await Promise.all([
+          api.stats.get(data.session.access_token),
+          api.blueprints.list(data.session.access_token).catch(() => []),
+        ]);
         setStats(s);
+        setBlueprints(bps);
       } catch {
         // Stats endpoint may not be available yet
       } finally {
@@ -56,6 +63,38 @@ export default function DashboardPage() {
       </div>
 
       <StatsCards stats={stats} loading={loading} />
+
+      {blueprints.length > 0 && (
+        <div className="mt-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Recent Blueprints</h2>
+            <Link href="/dashboard/blueprints">
+              <Button variant="ghost" size="sm">View all</Button>
+            </Link>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {blueprints.slice(0, 3).map((bp) => (
+              <Link key={bp.id} href={`/dashboard/blueprints/${bp.id}/edit`}>
+                <Card className="h-full transition-colors hover:border-primary/50">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <CardTitle className="text-sm">{bp.name}</CardTitle>
+                      <Badge variant="outline" className="text-[10px]">
+                        {bp.nodes.length} nodes
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {bp.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-8">
         <h2 className="text-xl font-semibold">Recent Runs</h2>
