@@ -149,7 +149,7 @@ export const api = {
       request<void>(`/api/blueprints/${id}`, { method: "DELETE", token }),
     templates: () => request<Blueprint[]>("/api/blueprints/templates"),
     nodeTypes: () => request<NodeTypeInfo[]>("/api/blueprints/node-types"),
-    run: (id: string, _input: { input_text: string }, _token: string) =>
+    run: (id: string) =>
       `${API_URL}/api/blueprints/${id}/run`,
     getRun: (runId: string, token: string) => request<BlueprintRun>(`/api/blueprints/runs/${runId}`, { token }),
     listRuns: (id: string, token: string) => request<BlueprintRun[]>(`/api/blueprints/${id}/runs`, { token }),

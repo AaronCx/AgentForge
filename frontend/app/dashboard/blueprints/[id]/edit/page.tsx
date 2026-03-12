@@ -61,6 +61,39 @@ export default function BlueprintEditorPage() {
 
   // Load blueprint and node types
   useEffect(() => {
+    function hydrate(bp: Blueprint, types: NodeTypeInfo[]) {
+      const typeMap = new Map(types.map((t) => [t.key, t]));
+
+      const rfNodes: Node[] = bp.nodes.map((n) => ({
+        id: n.id,
+        type: "blueprint",
+        position: n.position || { x: 0, y: 0 },
+        data: {
+          label: n.label,
+          nodeType: n.type,
+          nodeClass: typeMap.get(n.type)?.node_class || "deterministic",
+          config: n.config,
+        },
+      }));
+
+      const rfEdges: Edge[] = [];
+      for (const n of bp.nodes) {
+        for (const dep of n.dependencies) {
+          rfEdges.push({
+            id: `${dep}->${n.id}`,
+            source: dep,
+            target: n.id,
+            animated: true,
+            markerEnd: { type: MarkerType.ArrowClosed },
+            style: { stroke: "hsl(var(--muted-foreground))", strokeWidth: 2 },
+          });
+        }
+      }
+
+      setNodes(rfNodes);
+      setEdges(rfEdges);
+    }
+
     async function load() {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
@@ -83,41 +116,8 @@ export default function BlueprintEditorPage() {
       }
     }
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blueprintId, router]);
-
-  // Convert API blueprint nodes to React Flow nodes + edges
-  function hydrate(bp: Blueprint, types: NodeTypeInfo[]) {
-    const typeMap = new Map(types.map((t) => [t.key, t]));
-
-    const rfNodes: Node[] = bp.nodes.map((n) => ({
-      id: n.id,
-      type: "blueprint",
-      position: n.position || { x: 0, y: 0 },
-      data: {
-        label: n.label,
-        nodeType: n.type,
-        nodeClass: typeMap.get(n.type)?.node_class || "deterministic",
-        config: n.config,
-      },
-    }));
-
-    const rfEdges: Edge[] = [];
-    for (const n of bp.nodes) {
-      for (const dep of n.dependencies) {
-        rfEdges.push({
-          id: `${dep}->${n.id}`,
-          source: dep,
-          target: n.id,
-          animated: true,
-          markerEnd: { type: MarkerType.ArrowClosed },
-          style: { stroke: "hsl(var(--muted-foreground))", strokeWidth: 2 },
-        });
-      }
-    }
-
-    setNodes(rfNodes);
-    setEdges(rfEdges);
-  }
 
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
@@ -254,7 +254,7 @@ export default function BlueprintEditorPage() {
     // Save first
     await handleSave();
 
-    const url = api.blueprints.run(blueprintId, { input_text: runInput }, tokenRef.current);
+    const url = api.blueprints.run(blueprintId);
     const controller = new AbortController();
 
     try {

@@ -192,7 +192,7 @@ def get_node_type(key: str) -> NodeType | None:
 
 def list_node_types(category: str | None = None) -> list[dict]:
     """List all node types, optionally filtered by category."""
-    types = NODE_REGISTRY.values()
+    types = list(NODE_REGISTRY.values())
     if category:
         types = [t for t in types if t.category == category]
     return [
