@@ -341,6 +341,94 @@ def orchestrate(
         raise typer.Exit(1)
 
 
+messages_app = typer.Typer(help="View inter-agent messages")
+app.add_typer(messages_app, name="messages")
+
+
+@messages_app.command("list")
+def messages_list(
+    group_id: str = typer.Argument(..., help="Task group ID"),
+    message_type: str = typer.Option("", "--type", "-t", help="Filter by type: info, request, response, error, handoff"),
+    limit: int = typer.Option(50, "--limit", "-l", help="Max messages to show"),
+):
+    """List messages for a task group."""
+    try:
+        params: dict = {"limit": str(limit)}
+        if message_type:
+            params["message_type"] = message_type
+        messages = client.get(f"/api/messages/{group_id}", params=params)
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    if not messages:
+        console.print("[dim]No messages.[/dim]")
+        return
+
+    table = Table(title=f"Messages ({len(messages)})")
+    table.add_column("Type", style="bold", max_width=10)
+    table.add_column("From", max_width=12)
+    table.add_column("To", max_width=12)
+    table.add_column("Content")
+    table.add_column("Time", style="dim", max_width=10)
+
+    type_colors = {
+        "info": "blue",
+        "request": "purple",
+        "response": "green",
+        "error": "red",
+        "handoff": "yellow",
+    }
+
+    for msg in messages:
+        mtype = msg.get("message_type", "info")
+        color = type_colors.get(mtype, "white")
+        sender = f"Agent {msg['sender_index'] + 1}"
+        receiver = f"Agent {msg['receiver_index'] + 1}" if msg.get("receiver_index") is not None else "all"
+        ts = msg.get("created_at", "")[-8:] if msg.get("created_at") else ""
+        content = msg.get("content", "")[:80]
+
+        table.add_row(
+            f"[{color}]{mtype}[/{color}]",
+            sender,
+            receiver,
+            content,
+            ts,
+        )
+
+    console.print(table)
+
+
+@messages_app.command("conversation")
+def messages_conversation(
+    group_id: str = typer.Argument(..., help="Task group ID"),
+    agent_a: int = typer.Option(..., "--a", help="First agent index (0-based)"),
+    agent_b: int = typer.Option(..., "--b", help="Second agent index (0-based)"),
+):
+    """View conversation between two agents."""
+    try:
+        messages = client.get(
+            f"/api/messages/{group_id}/conversation",
+            params={"agent_a": str(agent_a), "agent_b": str(agent_b)},
+        )
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    if not messages:
+        console.print("[dim]No messages between these agents.[/dim]")
+        return
+
+    console.print(f"\n[bold]Conversation: Agent {agent_a + 1} ↔ Agent {agent_b + 1}[/bold]\n")
+    for msg in messages:
+        sender = f"Agent {msg['sender_index'] + 1}"
+        mtype = msg.get("message_type", "info")
+        content = msg.get("content", "")
+        console.print(f"  [bold]{sender}[/bold] [{mtype}]: {content}")
+
+    console.print()
+
+
 @app.command()
 def costs(
     breakdown: str = typer.Option("", "--breakdown", "-b", help="Breakdown by 'agent' or 'model'"),
