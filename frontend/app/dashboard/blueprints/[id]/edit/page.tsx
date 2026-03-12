@@ -42,8 +42,8 @@ export default function BlueprintEditorPage() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [nodeTypeList, setNodeTypeList] = useState<NodeTypeInfo[]>([]);
 
   const [blueprintName, setBlueprintName] = useState("");
