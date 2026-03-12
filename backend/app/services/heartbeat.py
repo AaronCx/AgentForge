@@ -58,30 +58,37 @@ class HeartbeatService:
         """Mark a heartbeat as failed."""
         self.update(heartbeat_id, state="failed")
 
-    def get_active(self) -> list[dict]:
+    def get_active(self, user_id: str | None = None) -> list[dict]:
         """Get all active (non-completed, non-failed) heartbeats."""
-        result = (
+        query = (
             supabase.table("agent_heartbeats")
-            .select("*, agents(name, description, tools)")
+            .select("*, agents(name, description, tools, user_id)")
             .in_("state", ["starting", "running", "stalled"])
             .order("updated_at", desc=True)
-            .execute()
         )
+        if user_id:
+            query = query.eq("agents.user_id", user_id)
+        result = query.execute()
+        # Filter out rows where the agents join returned null (user_id mismatch)
+        if user_id:
+            return [r for r in (result.data or []) if r.get("agents")]
         return result.data or []
 
-    def detect_stalled(self) -> list[dict]:
+    def detect_stalled(self, user_id: str | None = None) -> list[dict]:
         """Find heartbeats that haven't been updated within the threshold."""
         threshold = (
             datetime.now(UTC) - timedelta(seconds=STALE_THRESHOLD_SECONDS)
         ).isoformat()
 
-        result = (
+        query = (
             supabase.table("agent_heartbeats")
-            .select("*")
+            .select("*, agents!inner(user_id)")
             .in_("state", ["starting", "running"])
             .lt("updated_at", threshold)
-            .execute()
         )
+        if user_id:
+            query = query.eq("agents.user_id", user_id)
+        result = query.execute()
 
         stalled = result.data or []
         for hb in stalled:
@@ -89,26 +96,33 @@ class HeartbeatService:
 
         return stalled
 
-    def get_metrics(self) -> dict:
+    def get_metrics(self, user_id: str | None = None) -> dict:
         """Get aggregate dashboard metrics."""
-        active = (
+        active_query = (
             supabase.table("agent_heartbeats")
-            .select("id", count="exact")  # type: ignore[arg-type]
+            .select("id, agents!inner(user_id)", count="exact")  # type: ignore[arg-type]
             .in_("state", ["starting", "running"])
-            .execute()
         )
+        if user_id:
+            active_query = active_query.eq("agents.user_id", user_id)
+        active = active_query.execute()
 
-        all_today = (
+        today_query = (
             supabase.table("agent_heartbeats")
-            .select("tokens_used, cost_estimate", count="exact")  # type: ignore[arg-type]
+            .select("tokens_used, cost_estimate, agents!inner(user_id)", count="exact")  # type: ignore[arg-type]
             .gte("created_at", datetime.now(UTC).replace(hour=0, minute=0, second=0).isoformat())
-            .execute()
         )
+        if user_id:
+            today_query = today_query.eq("agents.user_id", user_id)
+        all_today = today_query.execute()
 
         tokens_today = sum(r.get("tokens_used", 0) for r in (all_today.data or []))
         cost_today = sum(float(r.get("cost_estimate", 0)) for r in (all_today.data or []))
 
-        total_agents = supabase.table("agents").select("id", count="exact").execute()  # type: ignore[arg-type]
+        agents_query = supabase.table("agents").select("id", count="exact")  # type: ignore[arg-type]
+        if user_id:
+            agents_query = agents_query.eq("user_id", user_id)
+        total_agents = agents_query.execute()
 
         return {
             "active_runs": active.count or 0,

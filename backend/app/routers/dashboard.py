@@ -19,7 +19,7 @@ async def get_active_agents(
     user=Depends(get_current_user),  # noqa: B008
 ):
     """Get all active agent heartbeats with agent details."""
-    heartbeats = heartbeat_service.get_active()
+    heartbeats = heartbeat_service.get_active(user_id=user.id)
     return heartbeats
 
 
@@ -28,7 +28,7 @@ async def get_dashboard_metrics(
     user=Depends(get_current_user),  # noqa: B008
 ):
     """Get aggregate dashboard metrics."""
-    metrics = heartbeat_service.get_metrics()
+    metrics = heartbeat_service.get_metrics(user_id=user.id)
     return metrics
 
 
@@ -41,7 +41,8 @@ async def get_event_timeline(
     """Get recent agent events for the timeline."""
     query = (
         supabase.table("agent_heartbeats")
-        .select("*, agents(name)")
+        .select("*, agents!inner(name, user_id)")
+        .eq("agents.user_id", user.id)
         .order("updated_at", desc=True)
         .limit(limit)
     )
@@ -97,17 +98,19 @@ async def stream_dashboard_updates(
     except Exception as exc:
         raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
 
+    user_id = user_response.user.id
+
     async def event_generator():
         while True:
             if await request.is_disconnected():
                 break
 
             # Detect stalled agents
-            heartbeat_service.detect_stalled()
+            heartbeat_service.detect_stalled(user_id=user_id)
 
             # Get current state
-            active = heartbeat_service.get_active()
-            metrics = heartbeat_service.get_metrics()
+            active = heartbeat_service.get_active(user_id=user_id)
+            metrics = heartbeat_service.get_metrics(user_id=user_id)
 
             payload = {
                 "active_agents": active,
