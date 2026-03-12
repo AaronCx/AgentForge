@@ -110,7 +110,13 @@ export function RunnerPanel({ agent }: RunnerPanelProps) {
         <Textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Enter your input for the agent..."
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !running && (input.trim() || file)) {
+              e.preventDefault();
+              runAgent();
+            }
+          }}
+          placeholder="Enter your input for the agent... (Ctrl+Enter to run)"
           rows={4}
         />
         <div className="flex items-center gap-3">
