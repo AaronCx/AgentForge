@@ -333,6 +333,42 @@ export interface PromptVersion {
   created_at: string;
 }
 
+export interface MarketplaceListing {
+  id: string;
+  blueprint_id: string;
+  user_id: string;
+  org_id: string | null;
+  title: string;
+  description: string;
+  category: string;
+  tags: string[];
+  version: string;
+  status: string;
+  fork_count: number;
+  rating_avg: number;
+  rating_count: number;
+  install_count: number;
+  published_at: string;
+  created_at: string;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  owner_id: string;
+  created_at: string;
+}
+
+export interface OrgMember {
+  id: string;
+  org_id: string;
+  user_id: string;
+  role: string;
+  joined_at: string;
+}
+
 export const api = {
   agents: {
     list: (token: string) => request<Agent[]>("/api/agents", { token }),
@@ -492,5 +528,47 @@ export const api = {
       request<PromptVersion>(`/api/prompts/${versionId}/rollback`, { method: "POST", token }),
     diff: (versionA: string, versionB: string, token: string) =>
       request<{ version_a: { id: string; version_number: number }; version_b: { id: string; version_number: number }; diff: string }>(`/api/prompts/${versionA}/diff/${versionB}`, { token }),
+  },
+  marketplace: {
+    listings: (query: string, token: string) =>
+      request<MarketplaceListing[]>(`/api/marketplace/listings${query}`, { token }),
+    getListing: (id: string, token: string) =>
+      request<MarketplaceListing>(`/api/marketplace/listings/${id}`, { token }),
+    myListings: (token: string) =>
+      request<MarketplaceListing[]>("/api/marketplace/my-listings", { token }),
+    publish: (data: { blueprint_id: string; title: string; description?: string; category?: string; tags?: string[]; version?: string; org_id?: string }, token: string) =>
+      request<MarketplaceListing>("/api/marketplace/listings", { method: "POST", body: JSON.stringify(data), token }),
+    update: (id: string, data: Record<string, unknown>, token: string) =>
+      request<MarketplaceListing>(`/api/marketplace/listings/${id}`, { method: "PUT", body: JSON.stringify(data), token }),
+    delete: (id: string, token: string) =>
+      request<void>(`/api/marketplace/listings/${id}`, { method: "DELETE", token }),
+    rate: (id: string, data: { rating: number; review?: string }, token: string) =>
+      request<Record<string, unknown>>(`/api/marketplace/listings/${id}/rate`, { method: "POST", body: JSON.stringify(data), token }),
+    ratings: (id: string, token: string) =>
+      request<{ rating: number; review: string; user_id: string }[]>(`/api/marketplace/listings/${id}/ratings`, { token }),
+    fork: (id: string, data: { forked_blueprint_id: string }, token: string) =>
+      request<Record<string, unknown>>(`/api/marketplace/listings/${id}/fork`, { method: "POST", body: JSON.stringify(data), token }),
+    forks: (id: string, token: string) =>
+      request<Record<string, unknown>[]>(`/api/marketplace/listings/${id}/forks`, { token }),
+  },
+  organizations: {
+    list: (token: string) =>
+      request<Organization[]>("/api/organizations", { token }),
+    get: (id: string, token: string) =>
+      request<Organization>(`/api/organizations/${id}`, { token }),
+    create: (data: { name: string; description?: string }, token: string) =>
+      request<Organization>("/api/organizations", { method: "POST", body: JSON.stringify(data), token }),
+    update: (id: string, data: Record<string, unknown>, token: string) =>
+      request<Organization>(`/api/organizations/${id}`, { method: "PUT", body: JSON.stringify(data), token }),
+    delete: (id: string, token: string) =>
+      request<void>(`/api/organizations/${id}`, { method: "DELETE", token }),
+    members: (orgId: string, token: string) =>
+      request<OrgMember[]>(`/api/organizations/${orgId}/members`, { token }),
+    addMember: (orgId: string, data: { user_id: string; role?: string }, token: string) =>
+      request<OrgMember>(`/api/organizations/${orgId}/members`, { method: "POST", body: JSON.stringify(data), token }),
+    updateMemberRole: (orgId: string, userId: string, data: { role: string }, token: string) =>
+      request<OrgMember>(`/api/organizations/${orgId}/members/${userId}`, { method: "PUT", body: JSON.stringify(data), token }),
+    removeMember: (orgId: string, userId: string, token: string) =>
+      request<void>(`/api/organizations/${orgId}/members/${userId}`, { method: "DELETE", token }),
   },
 };

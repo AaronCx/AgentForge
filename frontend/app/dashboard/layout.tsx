@@ -23,6 +23,8 @@ const navItems = [
   { href: "/dashboard/traces", label: "Traces" },
   { href: "/dashboard/prompts", label: "Prompts" },
   { href: "/dashboard/knowledge", label: "Knowledge" },
+  { href: "/dashboard/marketplace", label: "Marketplace" },
+  { href: "/dashboard/team", label: "Team" },
   { href: "/dashboard/settings", label: "Settings" },
 ];
 

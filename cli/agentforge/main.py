@@ -1484,6 +1484,219 @@ def knowledge_search(
         console.print(Panel(content, border_style="dim"))
 
 
+# --- Marketplace commands ---
+
+marketplace_app = typer.Typer(help="Browse and publish to the marketplace")
+app.add_typer(marketplace_app, name="marketplace")
+
+
+@marketplace_app.command("browse")
+def marketplace_browse(
+    category: str = typer.Option("", "--category", "-c", help="Filter by category"),
+    search_query: str = typer.Option("", "--search", "-s", help="Search by title"),
+    limit: int = typer.Option(20, "--limit", "-l", help="Max results"),
+):
+    """Browse marketplace listings."""
+    try:
+        params: dict = {"limit": str(limit)}
+        if category:
+            params["category"] = category
+        if search_query:
+            params["search"] = search_query
+        listings = client.get("/api/marketplace/listings", params=params)
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    if not listings:
+        console.print("[dim]No listings found.[/dim]")
+        return
+
+    table = Table(title="Marketplace")
+    table.add_column("ID", style="dim", max_width=8)
+    table.add_column("Title", style="bold")
+    table.add_column("Category")
+    table.add_column("Rating", justify="right")
+    table.add_column("Forks", justify="right")
+    table.add_column("Version", style="dim")
+
+    for li in listings:
+        rating = f"{li.get('rating_avg', 0):.1f} ({li.get('rating_count', 0)})"
+        table.add_row(
+            li["id"][:8],
+            li["title"],
+            li.get("category", ""),
+            rating,
+            str(li.get("fork_count", 0)),
+            li.get("version", ""),
+        )
+
+    console.print(table)
+
+
+@marketplace_app.command("publish")
+def marketplace_publish(
+    blueprint_id: str = typer.Option(..., "--blueprint", "-b", help="Blueprint ID to publish"),
+    title: str = typer.Option(..., "--title", "-t", help="Listing title"),
+    description: str = typer.Option("", "--desc", "-d", help="Description"),
+    category: str = typer.Option("general", "--category", "-c", help="Category"),
+):
+    """Publish a blueprint to the marketplace."""
+    try:
+        result = client.post("/api/marketplace/listings", json={
+            "blueprint_id": blueprint_id,
+            "title": title,
+            "description": description,
+            "category": category,
+        })
+        console.print(f"[green]Published:[/green] {result['title']} ({result['id'][:8]})")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@marketplace_app.command("rate")
+def marketplace_rate(
+    listing_id: str = typer.Argument(..., help="Listing ID to rate"),
+    rating: int = typer.Option(..., "--rating", "-r", help="Rating 1-5"),
+    review: str = typer.Option("", "--review", help="Optional review text"),
+):
+    """Rate a marketplace listing."""
+    if rating < 1 or rating > 5:
+        console.print("[red]Rating must be 1-5[/red]")
+        raise typer.Exit(1)
+    try:
+        client.post(f"/api/marketplace/listings/{listing_id}/rate", json={
+            "rating": rating,
+            "review": review,
+        })
+        console.print(f"[green]Rated {listing_id[:8]} with {rating}/5[/green]")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@marketplace_app.command("fork")
+def marketplace_fork(
+    listing_id: str = typer.Argument(..., help="Listing ID to fork"),
+    blueprint_id: str = typer.Option(..., "--blueprint", "-b", help="New blueprint ID for the fork"),
+):
+    """Fork a marketplace listing."""
+    try:
+        result = client.post(f"/api/marketplace/listings/{listing_id}/fork", json={
+            "forked_blueprint_id": blueprint_id,
+        })
+        console.print(f"[green]Forked {listing_id[:8]}[/green] → {result.get('forked_blueprint_id', blueprint_id)[:8]}")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+# --- Team/Org commands ---
+
+teams_app = typer.Typer(help="Manage organizations and teams")
+app.add_typer(teams_app, name="teams")
+
+
+@teams_app.command("list")
+def teams_list():
+    """List your organizations."""
+    try:
+        orgs = client.get("/api/organizations")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    if not orgs:
+        console.print("[dim]No organizations.[/dim]")
+        return
+
+    table = Table(title="Organizations")
+    table.add_column("ID", style="dim", max_width=8)
+    table.add_column("Name", style="bold")
+    table.add_column("Slug")
+    table.add_column("Description")
+
+    for org in orgs:
+        table.add_row(
+            org["id"][:8],
+            org["name"],
+            f"@{org['slug']}",
+            (org.get("description", "") or "")[:40],
+        )
+
+    console.print(table)
+
+
+@teams_app.command("create")
+def teams_create(
+    name: str = typer.Option(..., "--name", "-n", help="Organization name"),
+    description: str = typer.Option("", "--desc", "-d", help="Description"),
+):
+    """Create a new organization."""
+    try:
+        result = client.post("/api/organizations", json={
+            "name": name,
+            "description": description,
+        })
+        console.print(f"[green]Created:[/green] {result['name']} (@{result['slug']})")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@teams_app.command("members")
+def teams_members(
+    org_id: str = typer.Argument(..., help="Organization ID"),
+):
+    """List members of an organization."""
+    try:
+        members = client.get(f"/api/organizations/{org_id}/members")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    if not members:
+        console.print("[dim]No members.[/dim]")
+        return
+
+    table = Table(title="Members")
+    table.add_column("User", style="dim")
+    table.add_column("Role", style="bold")
+    table.add_column("Joined", style="dim")
+
+    role_colors = {"owner": "yellow", "admin": "blue", "member": "green", "viewer": "dim"}
+
+    for m in members:
+        role = m.get("role", "member")
+        color = role_colors.get(role, "white")
+        table.add_row(
+            m["user_id"][:12],
+            f"[{color}]{role}[/{color}]",
+            m.get("joined_at", "")[:10],
+        )
+
+    console.print(table)
+
+
+@teams_app.command("add-member")
+def teams_add_member(
+    org_id: str = typer.Argument(..., help="Organization ID"),
+    user_id: str = typer.Option(..., "--user", "-u", help="User ID to add"),
+    role: str = typer.Option("member", "--role", "-r", help="Role: admin, member, viewer"),
+):
+    """Add a member to an organization."""
+    try:
+        client.post(f"/api/organizations/{org_id}/members", json={
+            "user_id": user_id,
+            "role": role,
+        })
+        console.print(f"[green]Added {user_id[:8]} as {role}[/green]")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
 if __name__ == "__main__":
     app()
 
