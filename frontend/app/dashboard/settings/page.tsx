@@ -22,6 +22,7 @@ export default function SettingsPage() {
   const [newKeyValue, setNewKeyValue] = useState("");
   const [totalTokens, setTotalTokens] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (isDemoMode()) {
@@ -63,8 +64,8 @@ export default function SettingsPage() {
       setNewKeyValue(result.key);
       setNewKeyName("");
       await loadData();
-    } catch {
-      // handle error
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create key");
     } finally {
       setLoading(false);
     }
@@ -77,8 +78,8 @@ export default function SettingsPage() {
     try {
       await api.keys.delete(id, data.session.access_token);
       setKeys(keys.filter((k) => k.id !== id));
-    } catch {
-      // handle error
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete key");
     }
   }
 
@@ -88,6 +89,12 @@ export default function SettingsPage() {
       <p className="mt-1 text-muted-foreground">
         Manage API keys and view usage
       </p>
+
+      {error && (
+        <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <Card>
