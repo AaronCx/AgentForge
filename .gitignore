@@ -16,6 +16,10 @@ Thumbs.db
 htmlcov/
 .pytest_cache/
 supabase/.temp/
+.ruff_cache/
+.idea/
+.vscode/
+package-lock.json
 *.swp
 *.swo
 *~
