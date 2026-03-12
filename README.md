@@ -11,6 +11,7 @@ Build custom AI agents that chain LLM calls, search the web, parse documents, ex
 ![Supabase](https://img.shields.io/badge/Supabase-Auth%20%2B%20DB-3ECF8E?logo=supabase)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python)
+![Bun](https://img.shields.io/badge/Bun-%23000000.svg?style=for-the-badge&logo=bun&logoColor=white)
 
 ---
 
@@ -93,7 +94,7 @@ graph TB
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js 14, TypeScript, Tailwind CSS, shadcn/ui |
+| Frontend | Next.js 14, TypeScript, Tailwind CSS, shadcn/ui, Bun |
 | Backend | Python 3.12, FastAPI, LangChain, OpenAI API |
 | Database | PostgreSQL via Supabase |
 | Auth | Supabase Auth (email + GitHub OAuth) |
