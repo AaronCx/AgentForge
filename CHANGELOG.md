@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-03-12
+
+### Added
+
+- Agent heartbeats table for real-time execution monitoring
+- Heartbeat service with stalled agent detection (30s threshold)
+- Dashboard API: active agents, metrics, event timeline, SSE stream
+- Live Monitor page with MetricsBar, AgentStatusGrid, EventTimeline
+- SSE-powered real-time updates with auto-reconnect
+- CLI client (`agentforge`) with typer + rich + httpx
+- CLI commands: status, dashboard (live TUI), agents list/run/create
+- CLI config from ~/.agentforge/config.toml or environment variables
+- Dashboard and CLI tests (14 new tests)
+
+### Changed
+
+- Agent executor now reports heartbeat progress at each workflow step
+- Run endpoint creates heartbeats for live monitoring
+- Dashboard sidebar now includes Monitor nav item
+
 ## [0.2.0] - 2026-03-12
 
 ### Added
