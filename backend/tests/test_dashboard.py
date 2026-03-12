@@ -31,7 +31,7 @@ def test_dashboard_active(auth_client):
     with patch("app.services.heartbeat.supabase") as mock_db:
         mock_result = MagicMock()
         mock_result.data = []
-        mock_db.table.return_value.select.return_value.in_.return_value.order.return_value.execute.return_value = mock_result
+        mock_db.table.return_value.select.return_value.in_.return_value.order.return_value.eq.return_value.execute.return_value = mock_result
 
         response = auth_client.get(
             "/api/dashboard/active",
@@ -56,10 +56,10 @@ def test_dashboard_metrics(auth_client):
         def table_side_effect(name):
             mock_table = MagicMock()
             if name == "agent_heartbeats":
-                mock_table.select.return_value.in_.return_value.execute.return_value = mock_active
-                mock_table.select.return_value.gte.return_value.execute.return_value = mock_today
+                mock_table.select.return_value.in_.return_value.eq.return_value.execute.return_value = mock_active
+                mock_table.select.return_value.gte.return_value.eq.return_value.execute.return_value = mock_today
             elif name == "agents":
-                mock_table.select.return_value.execute.return_value = mock_agents
+                mock_table.select.return_value.eq.return_value.execute.return_value = mock_agents
             return mock_table
 
         mock_db.table.side_effect = table_side_effect
@@ -80,7 +80,7 @@ def test_dashboard_timeline(auth_client):
     with patch("app.routers.dashboard.supabase") as mock_db:
         mock_result = MagicMock()
         mock_result.data = []
-        mock_db.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = mock_result
+        mock_db.table.return_value.select.return_value.eq.return_value.order.return_value.limit.return_value.execute.return_value = mock_result
 
         response = auth_client.get(
             "/api/dashboard/timeline",
@@ -123,7 +123,7 @@ def test_dashboard_timeline_with_events(auth_client):
                 "agents": {"name": "StalledAgent"},
             },
         ]
-        mock_db.table.return_value.select.return_value.order.return_value.limit.return_value.execute.return_value = mock_result
+        mock_db.table.return_value.select.return_value.eq.return_value.order.return_value.limit.return_value.execute.return_value = mock_result
 
         response = auth_client.get("/api/dashboard/timeline")
         assert response.status_code == 200
