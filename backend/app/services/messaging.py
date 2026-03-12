@@ -1,0 +1,101 @@
+"""Inter-agent messaging service."""
+
+from typing import Literal
+
+from app.database import supabase
+
+MessageType = Literal["info", "request", "response", "error", "handoff"]
+
+
+class MessagingService:
+    """Handles message passing between agents within a task group."""
+
+    def send(
+        self,
+        *,
+        group_id: str,
+        sender_index: int,
+        receiver_index: int | None = None,
+        message_type: MessageType = "info",
+        content: str,
+        metadata: dict | None = None,
+    ) -> dict:
+        """Send a message from one agent to another (or broadcast if receiver is None)."""
+        row = {
+            "group_id": group_id,
+            "sender_index": sender_index,
+            "message_type": message_type,
+            "content": content,
+            "metadata": metadata or {},
+        }
+        if receiver_index is not None:
+            row["receiver_index"] = receiver_index
+
+        result = supabase.table("agent_messages").insert(row).execute()
+        return result.data[0] if result.data else row
+
+    def get_messages(
+        self,
+        group_id: str,
+        *,
+        receiver_index: int | None = None,
+        message_type: MessageType | None = None,
+        limit: int = 50,
+    ) -> list[dict]:
+        """Get messages for a group, optionally filtered by receiver or type."""
+        query = (
+            supabase.table("agent_messages")
+            .select("*")
+            .eq("group_id", group_id)
+            .order("created_at")
+            .limit(limit)
+        )
+        if receiver_index is not None:
+            query = query.or_(f"receiver_index.eq.{receiver_index},receiver_index.is.null")
+        if message_type:
+            query = query.eq("message_type", message_type)
+
+        result = query.execute()
+        return result.data or []
+
+    def get_conversation(
+        self,
+        group_id: str,
+        agent_a: int,
+        agent_b: int,
+        limit: int = 50,
+    ) -> list[dict]:
+        """Get messages exchanged between two specific agents."""
+        result = (
+            supabase.table("agent_messages")
+            .select("*")
+            .eq("group_id", group_id)
+            .or_(
+                f"and(sender_index.eq.{agent_a},receiver_index.eq.{agent_b}),"
+                f"and(sender_index.eq.{agent_b},receiver_index.eq.{agent_a})"
+            )
+            .order("created_at")
+            .limit(limit)
+            .execute()
+        )
+        return result.data or []
+
+    def broadcast(
+        self,
+        *,
+        group_id: str,
+        sender_index: int,
+        content: str,
+        message_type: MessageType = "info",
+    ) -> dict:
+        """Send a broadcast message (no specific receiver)."""
+        return self.send(
+            group_id=group_id,
+            sender_index=sender_index,
+            receiver_index=None,
+            message_type=message_type,
+            content=content,
+        )
+
+
+messaging_service = MessagingService()
