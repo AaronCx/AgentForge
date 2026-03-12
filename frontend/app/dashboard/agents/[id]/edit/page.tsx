@@ -10,6 +10,7 @@ export default function EditAgentPage() {
   const params = useParams();
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -19,8 +20,8 @@ export default function EditAgentPage() {
       try {
         const a = await api.agents.get(params.id as string, data.session.access_token);
         setAgent(a);
-      } catch {
-        // handle error
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load agent");
       } finally {
         setLoading(false);
       }
@@ -29,6 +30,7 @@ export default function EditAgentPage() {
   }, [params.id]);
 
   if (loading) return <p className="text-muted-foreground">Loading agent...</p>;
+  if (error) return <p className="text-destructive">{error}</p>;
   if (!agent) return <p className="text-destructive">Agent not found</p>;
 
   return (
