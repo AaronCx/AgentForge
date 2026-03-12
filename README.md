@@ -106,7 +106,8 @@ graph TB
 
 ### Prerequisites
 
-- Node.js 20+
+- [Bun](https://bun.sh) (frontend package manager and build tool)
+- Node.js 20+ (used in production Docker runner)
 - Python 3.12+
 - Supabase project ([create one](https://supabase.com))
 - OpenAI API key
@@ -149,14 +150,14 @@ uvicorn app.main:app --reload
 
 ```bash
 cd frontend
-npm install
+bun install
 
 cp .env.example .env.local
 # Edit .env.local with your Supabase keys
 ```
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 ### 5. Using Docker
