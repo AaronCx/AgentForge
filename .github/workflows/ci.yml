@@ -15,14 +15,26 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-      - run: npm run lint
-      - run: npx tsc --noEmit
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bunx tsc --noEmit
+
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run test
 
   backend-test:
     name: Backend Lint & Test
@@ -38,6 +50,7 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r requirements.txt
-      - run: pip install pytest pytest-asyncio ruff
-      - run: ruff check app/
-      - run: pytest tests/ -v
+      - run: pip install pytest pytest-asyncio pytest-cov ruff mypy
+      - run: ruff check app/ --config ../ruff.toml
+      - run: mypy app/ --config-file mypy.ini
+      - run: pytest tests/ -v --cov=app
