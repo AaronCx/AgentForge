@@ -64,7 +64,7 @@ async def linux_steer_ocr(target: str = "screen", store: bool = False) -> dict[s
                     "width": int(parts[8]),
                     "height": int(parts[9]),
                 })
-        text = " ".join(e["text"] for e in elements)
+        text = " ".join(str(e["text"]) for e in elements)
         return {"text": text, "elements": elements, "element_count": len(elements)}
     else:
         text = await _run(["tesseract", path, "stdout"])

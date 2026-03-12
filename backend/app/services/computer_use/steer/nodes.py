@@ -361,7 +361,7 @@ async def execute_steer_find(config: dict, inputs: dict[str, Any]) -> dict[str, 
         result=f"found at {coordinates}" if found else "not found",
         user_id=inputs.get("_user_id", ""),
         run_id=inputs.get("_run_id", ""),
-        success=found,
+        success=bool(found),
     )
 
     return {
