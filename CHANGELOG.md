@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-03-12
+
+### Added
+
+- Heartbeat service tests (10): start, update, complete, fail, stalled detection, metrics
+- Runs route tests (5): list, get, not found, wrong user, stats
+- Token tracker + cost calculation tests (10): pricing models, summaries, projections
+- Dashboard timeline test with severity mapping and agent name fallback
+- Frontend dashboard tests (6): MetricsBar, AgentStatusGrid, EventTimeline with empty states
+- Test coverage badges in README (84 backend, 21 frontend, 66% coverage)
+
+### Changed
+
+- Backend test count: 58 → 84 passing
+- Frontend test count: 15 → 21 passing
+- Backend coverage: 62% → 66%
+
 ## [0.6.0] - 2026-03-12
 
 ### Added

@@ -12,6 +12,9 @@ Build custom AI agents that chain LLM calls, search the web, parse documents, ex
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python)
 ![Bun](https://img.shields.io/badge/Bun-%23000000.svg?style=for-the-badge&logo=bun&logoColor=white)
+![Backend Tests](https://img.shields.io/badge/backend_tests-84_passing-brightgreen)
+![Frontend Tests](https://img.shields.io/badge/frontend_tests-21_passing-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-66%25-yellow)
 
 ---
 
