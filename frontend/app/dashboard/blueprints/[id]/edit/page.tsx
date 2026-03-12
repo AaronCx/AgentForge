@@ -53,7 +53,7 @@ export default function BlueprintEditorPage() {
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [runInput, setRunInput] = useState("");
-  const [nodeStatuses, setNodeStatuses] = useState<Record<string, NodeStatus>>({});
+
   const [executionLog, setExecutionLog] = useState<string[]>([]);
   const [showTrace, setShowTrace] = useState(false);
 
@@ -243,8 +243,6 @@ export default function BlueprintEditorPage() {
     setRunning(true);
     setShowTrace(true);
     setExecutionLog([]);
-    setNodeStatuses({});
-
     // Reset node statuses to pending
     setNodes((nds) =>
       nds.map((n) => ({
@@ -343,7 +341,6 @@ export default function BlueprintEditorPage() {
   }
 
   function updateNodeStatus(nodeId: string, status: NodeStatus) {
-    setNodeStatuses((prev) => ({ ...prev, [nodeId]: status }));
     setNodes((nds) =>
       nds.map((n) =>
         n.id === nodeId ? { ...n, data: { ...n.data, ...status } } : n,

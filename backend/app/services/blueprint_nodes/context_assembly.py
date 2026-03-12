@@ -85,7 +85,7 @@ def assemble_context(
     assembled_parts: list[str] = []
     total_tokens = 0
 
-    for score, node_id, text in pieces:
+    for _score, node_id, text in pieces:
         text_tokens = _estimate_tokens(text)
 
         if total_tokens + text_tokens > budget:

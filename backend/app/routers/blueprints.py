@@ -29,7 +29,9 @@ router = APIRouter(tags=["blueprints"])
 
 
 @router.get("/blueprints", response_model=list[BlueprintResponse])
-async def list_blueprints(user=Depends(get_current_user)):
+async def list_blueprints(
+    user=Depends(get_current_user),  # noqa: B008
+):
     """List user's blueprints."""
     result = (
         supabase.table("blueprints")
@@ -61,7 +63,9 @@ async def get_node_types(category: str | None = Query(None)):
 
 
 @router.get("/blueprints/{blueprint_id}", response_model=BlueprintResponse)
-async def get_blueprint(blueprint_id: str, user=Depends(get_current_user)):
+async def get_blueprint(
+    blueprint_id: str, user=Depends(get_current_user),  # noqa: B008
+):
     """Get a blueprint by ID."""
     result = (
         supabase.table("blueprints")
@@ -83,7 +87,7 @@ async def get_blueprint(blueprint_id: str, user=Depends(get_current_user)):
 @router.post("/blueprints", response_model=BlueprintResponse, status_code=201)
 @limiter.limit("20/hour")
 async def create_blueprint(
-    bp: BlueprintCreate, request: Request, user=Depends(get_current_user)
+    bp: BlueprintCreate, request: Request, user=Depends(get_current_user),  # noqa: B008
 ):
     """Create a new blueprint."""
     data = {
@@ -104,7 +108,7 @@ async def create_blueprint(
 
 @router.put("/blueprints/{blueprint_id}", response_model=BlueprintResponse)
 async def update_blueprint(
-    blueprint_id: str, bp: BlueprintUpdate, user=Depends(get_current_user)
+    blueprint_id: str, bp: BlueprintUpdate, user=Depends(get_current_user),  # noqa: B008
 ):
     """Update a blueprint."""
     # Verify ownership
@@ -138,7 +142,9 @@ async def update_blueprint(
 
 
 @router.delete("/blueprints/{blueprint_id}", status_code=204)
-async def delete_blueprint(blueprint_id: str, user=Depends(get_current_user)):
+async def delete_blueprint(
+    blueprint_id: str, user=Depends(get_current_user),  # noqa: B008
+):
     """Delete a blueprint."""
     existing = (
         supabase.table("blueprints")
@@ -162,7 +168,7 @@ async def run_blueprint(
     blueprint_id: str,
     run_req: BlueprintRunRequest,
     request: Request,
-    user=Depends(get_current_user),
+    user=Depends(get_current_user),  # noqa: B008
 ):
     """Execute a blueprint with input payload. Streams progress via SSE."""
     # Load blueprint
@@ -230,7 +236,9 @@ async def run_blueprint(
 
 
 @router.get("/blueprints/runs/{run_id}", response_model=BlueprintRunResponse)
-async def get_blueprint_run(run_id: str, user=Depends(get_current_user)):
+async def get_blueprint_run(
+    run_id: str, user=Depends(get_current_user),  # noqa: B008
+):
     """Get execution trace for a blueprint run."""
     result = (
         supabase.table("blueprint_runs")
@@ -250,7 +258,7 @@ async def get_blueprint_run(run_id: str, user=Depends(get_current_user)):
 async def list_blueprint_runs(
     blueprint_id: str,
     limit: int = Query(20, ge=1, le=100),
-    user=Depends(get_current_user),
+    user=Depends(get_current_user),  # noqa: B008
 ):
     """List runs for a specific blueprint."""
     result = (

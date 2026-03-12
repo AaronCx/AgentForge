@@ -14,7 +14,6 @@ from app.services.blueprint_nodes.agent_nodes import AGENT_EXECUTORS
 from app.services.blueprint_nodes.context_assembly import assemble_context
 from app.services.blueprint_nodes.deterministic import DETERMINISTIC_EXECUTORS
 from app.services.blueprint_nodes.registry import NODE_REGISTRY
-from app.services.heartbeat import heartbeat_service
 from app.services.token_tracker import calculate_cost, token_tracker
 
 logger = logging.getLogger(__name__)

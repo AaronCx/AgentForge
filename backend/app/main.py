@@ -20,8 +20,8 @@ from app.routers import (
     orchestration,
     runs,
 )
-from app.services.rate_limiter import limiter
 from app.services.blueprint_templates import seed_blueprint_templates
+from app.services.rate_limiter import limiter
 from app.services.templates import seed_templates
 
 load_dotenv()
