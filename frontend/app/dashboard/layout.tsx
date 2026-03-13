@@ -5,8 +5,15 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { isDemoMode } from "@/lib/demo-data";
+import { Menu } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
@@ -28,6 +35,60 @@ const navItems = [
   { href: "/dashboard/settings", label: "Settings" },
 ];
 
+function SidebarContent({
+  pathname,
+  userEmail,
+  demo,
+  onLogout,
+  onNavigate,
+}: {
+  pathname: string;
+  userEmail: string;
+  demo: boolean;
+  onLogout: () => void;
+  onNavigate?: () => void;
+}) {
+  return (
+    <>
+      <nav className="flex flex-col gap-1 p-4">
+        {navItems.map((item) => {
+          const href = demo ? `${item.href}?demo=true` : item.href;
+          return (
+            <Link
+              key={item.href}
+              href={href}
+              onClick={onNavigate}
+              className={cn(
+                "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                (item.href === "/dashboard"
+                  ? pathname === "/dashboard"
+                  : pathname.startsWith(item.href))
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="mt-auto border-t border-border p-4">
+        <p className="truncate text-xs text-muted-foreground" title={userEmail}>
+          {userEmail}
+        </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-2 w-full justify-start text-muted-foreground"
+          onClick={onLogout}
+        >
+          Sign out
+        </Button>
+      </div>
+    </>
+  );
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -36,6 +97,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [userEmail, setUserEmail] = useState("");
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     if (isDemoMode()) {
@@ -56,6 +118,10 @@ export default function DashboardLayout({
       });
   }, [router]);
 
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
   const demo = isDemoMode();
 
   async function handleLogout() {
@@ -65,54 +131,63 @@ export default function DashboardLayout({
     router.push("/login");
   }
 
+  const logo = (
+    <div className="flex h-16 items-center gap-2 border-b border-border px-6">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
+        AF
+      </div>
+      <span className="text-lg font-bold">AgentForge</span>
+    </div>
+  );
+
   return (
     <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-border bg-card">
-        <div className="flex h-16 items-center gap-2 border-b border-border px-6">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-            AF
-          </div>
-          <span className="text-lg font-bold">AgentForge</span>
-        </div>
-        <nav className="flex flex-col gap-1 p-4">
-          {navItems.map((item) => {
-            const href = demo ? `${item.href}?demo=true` : item.href;
-            return (
-              <Link
-                key={item.href}
-                href={href}
-                className={cn(
-                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  (item.href === "/dashboard"
-                    ? pathname === "/dashboard"
-                    : pathname.startsWith(item.href))
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                )}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="mt-auto border-t border-border p-4">
-          <p className="truncate text-xs text-muted-foreground" title={userEmail}>{userEmail}</p>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-2 w-full justify-start text-muted-foreground"
-            onClick={handleLogout}
-          >
-            Sign out
-          </Button>
-        </div>
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex md:w-64 md:flex-col border-r border-border bg-card">
+        {logo}
+        <SidebarContent
+          pathname={pathname}
+          userEmail={userEmail}
+          demo={demo}
+          onLogout={handleLogout}
+        />
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        <div className="mx-auto max-w-6xl p-8">{children}</div>
-      </main>
+      {/* Mobile Header + Sheet */}
+      <div className="flex flex-1 flex-col">
+        <header className="flex md:hidden h-14 items-center gap-3 border-b border-border bg-card px-4">
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="shrink-0">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 p-0">
+              <SheetTitle className="sr-only">Navigation</SheetTitle>
+              {logo}
+              <SidebarContent
+                pathname={pathname}
+                userEmail={userEmail}
+                demo={demo}
+                onLogout={handleLogout}
+                onNavigate={() => setMobileOpen(false)}
+              />
+            </SheetContent>
+          </Sheet>
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-xs">
+              AF
+            </div>
+            <span className="font-semibold">AgentForge</span>
+          </div>
+        </header>
+
+        {/* Main content */}
+        <main className="flex-1 overflow-auto">
+          <div className="mx-auto max-w-6xl p-4 md:p-8">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

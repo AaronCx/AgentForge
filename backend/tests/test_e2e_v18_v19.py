@@ -86,6 +86,7 @@ class TestCapabilityDetection:
 
     def test_1_5_cli_cu_status_command_registered(self):
         """1.5 — CLI has computer-use status command."""
+        pytest.importorskip("typer")
         from cli.agentforge.main import cu_app
         # Check the command group has a "status" command
         command_names = [cmd.name for cmd in cu_app.registered_commands]
@@ -594,6 +595,7 @@ class TestCLICommands:
 
     def test_11_1_cli_commands_registered(self):
         """11.1 — All expected CLI commands exist."""
+        pytest.importorskip("typer")
         from cli.agentforge.main import cu_app
         command_names = [cmd.name for cmd in cu_app.registered_commands]
         for expected in ["status", "see", "ocr", "click", "type", "hotkey", "run", "logs", "sessions", "apps", "remote"]:
@@ -752,6 +754,7 @@ class TestAgentOnAgent:
 
     def test_14_11_cli_backends_commands(self):
         """14.11 — CLI has backends list and test commands."""
+        pytest.importorskip("typer")
         from cli.agentforge.main import backends_app
         command_names = [cmd.name for cmd in backends_app.registered_commands]
         assert "list" in command_names
@@ -852,6 +855,7 @@ class TestMultiMachineDispatch:
 
     def test_15_10_cli_targets_commands(self):
         """15.10 — CLI targets commands registered."""
+        pytest.importorskip("typer")
         from cli.agentforge.main import targets_app
         command_names = [cmd.name for cmd in targets_app.registered_commands]
         for expected in ["list", "add", "health", "remove"]:
@@ -897,6 +901,7 @@ class TestScreenRecording:
 
     def test_16_7_cli_recordings_commands(self):
         """16.7 — CLI recordings commands registered."""
+        pytest.importorskip("typer")
         from cli.agentforge.main import recordings_app
         command_names = [cmd.name for cmd in recordings_app.registered_commands]
         for expected in ["list", "play", "cleanup"]:
