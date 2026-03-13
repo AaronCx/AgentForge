@@ -12,7 +12,7 @@ from rich.text import Text
 
 from agentforge import __version__
 from agentforge import client
-from agentforge.config import ensure_config, get_api_url
+from agentforge.config import ensure_config, get_api_url, get_api_key, get_config, CONFIG_FILE
 
 app = typer.Typer(
     name="agentforge",
@@ -35,8 +35,212 @@ def version():
 def init():
     """Initialize CLI configuration."""
     ensure_config()
-    console.print(f"[green]Config created at ~/.agentforge/config.toml[/green]")
-    console.print(f"Set your api_url and api_key in the config file.")
+    console.print("[green]Config created at ~/.agentforge/config.toml[/green]")
+    console.print("Set your api_url and api_key in the config file.")
+
+
+# --- Config commands ---
+
+config_app = typer.Typer(help="View and update CLI configuration")
+app.add_typer(config_app, name="config")
+
+
+@config_app.command("show")
+def config_show():
+    """Display current configuration (API key is masked)."""
+    try:
+        cfg = get_config()
+        key = cfg.get("api_key", "")
+        masked = f"{key[:4]}...{key[-4:]}" if len(key) > 8 else "***" if key else "(not set)"
+        console.print()
+        console.print("[bold]AgentForge CLI Configuration[/bold]")
+        console.print(f"  api_url:       {cfg.get('api_url', '(not set)')}")
+        console.print(f"  api_key:       {masked}")
+        console.print(f"  default_model: {cfg.get('default_model', '(not set)')}")
+        console.print(f"\n[dim]Config file: {CONFIG_FILE}[/dim]")
+        console.print()
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@config_app.command("set")
+def config_set(
+    key: str = typer.Argument(..., help="Config key (api-key, api-url, default-model)"),
+    value: str = typer.Argument(..., help="Config value"),
+):
+    """Set a configuration value."""
+    key_map = {
+        "api-key": "api_key",
+        "api-url": "api_url",
+        "default-model": "default_model",
+        "api_key": "api_key",
+        "api_url": "api_url",
+        "default_model": "default_model",
+    }
+    config_key = key_map.get(key)
+    if not config_key:
+        console.print(f"[red]Unknown config key: {key}[/red]")
+        console.print("[dim]Valid keys: api-key, api-url, default-model[/dim]")
+        raise typer.Exit(1)
+
+    ensure_config()
+    # Read existing config and update
+    lines = []
+    found = False
+    if CONFIG_FILE.exists():
+        for line in CONFIG_FILE.read_text().splitlines():
+            if line.strip().startswith(f"{config_key} "):
+                lines.append(f'{config_key} = "{value}"')
+                found = True
+            else:
+                lines.append(line)
+    if not found:
+        lines.append(f'{config_key} = "{value}"')
+    CONFIG_FILE.write_text("\n".join(lines) + "\n")
+
+    display_value = f"{value[:4]}...{value[-4:]}" if config_key == "api_key" and len(value) > 8 else value
+    console.print(f"[green]Set {config_key} = {display_value}[/green]")
+
+
+# --- Auth/utility commands ---
+
+
+@app.command()
+def whoami():
+    """Show current user info."""
+    try:
+        stats = client.get("/api/stats")
+        console.print()
+        console.print(f"[bold]User:[/bold] {stats.get('user_id', 'unknown')}")
+        console.print(f"[bold]API URL:[/bold] {get_api_url()}")
+        if stats.get("email"):
+            console.print(f"[bold]Email:[/bold] {stats['email']}")
+        if stats.get("plan"):
+            console.print(f"[bold]Plan:[/bold] {stats['plan']}")
+        console.print()
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command()
+def health():
+    """Show system health status."""
+    try:
+        h = client.get("/health")
+        dh = client.get("/api/dashboard/health")
+    except Exception as e:
+        console.print(f"[red]Error connecting to API: {e}[/red]")
+        raise typer.Exit(1)
+
+    status_val = h.get("status", "unknown")
+    color = {"healthy": "green", "ok": "green", "degraded": "yellow", "unhealthy": "red"}.get(status_val, "white")
+    console.print()
+    console.print(f"[bold]System Health:[/bold] [{color}]{status_val}[/{color}]")
+    console.print(f"  Version: {h.get('version', 'unknown')}")
+    console.print(f"  Uptime:  {h.get('uptime', 'unknown')}")
+
+    services = dh.get("services", {})
+    if services:
+        console.print("\n[bold]Services[/bold]")
+        for svc, info in services.items():
+            svc_status = info if isinstance(info, str) else info.get("status", "unknown")
+            svc_color = {"healthy": "green", "ok": "green", "degraded": "yellow", "unhealthy": "red"}.get(svc_status, "white")
+            console.print(f"  {svc}: [{svc_color}]{svc_status}[/{svc_color}]")
+    console.print()
+
+
+@app.command()
+def login(
+    api_key: str = typer.Argument(..., help="API key to set"),
+):
+    """Set API key (alias for config set api-key)."""
+    ensure_config()
+    lines = []
+    found = False
+    if CONFIG_FILE.exists():
+        for line in CONFIG_FILE.read_text().splitlines():
+            if line.strip().startswith("api_key "):
+                lines.append(f'api_key = "{api_key}"')
+                found = True
+            else:
+                lines.append(line)
+    if not found:
+        lines.append(f'api_key = "{api_key}"')
+    CONFIG_FILE.write_text("\n".join(lines) + "\n")
+
+    masked = f"{api_key[:4]}...{api_key[-4:]}" if len(api_key) > 8 else "***"
+    console.print(f"[green]API key saved: {masked}[/green]")
+
+
+# --- Keys commands ---
+
+keys_app = typer.Typer(help="Manage API keys")
+app.add_typer(keys_app, name="keys")
+
+
+@keys_app.command("list")
+def keys_list():
+    """List API keys."""
+    try:
+        keys = client.get("/api/keys")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    if not keys:
+        console.print("[dim]No API keys.[/dim]")
+        return
+
+    table = Table(title="API Keys")
+    table.add_column("ID", style="dim", max_width=8)
+    table.add_column("Name", style="bold")
+    table.add_column("Key", style="dim")
+    table.add_column("Created", style="dim")
+
+    for k in keys:
+        key_val = k.get("key", k.get("prefix", ""))
+        masked = f"{key_val[:8]}..." if len(key_val) > 8 else key_val
+        table.add_row(
+            k["id"][:8],
+            k.get("name", ""),
+            masked,
+            k.get("created_at", "")[:10],
+        )
+
+    console.print(table)
+
+
+@keys_app.command("generate")
+def keys_generate(
+    name: str = typer.Option(..., "--name", "-n", help="Key name"),
+):
+    """Generate a new API key."""
+    try:
+        result = client.post("/api/keys", json={"name": name})
+        console.print(f"[green]Generated API key:[/green] {result.get('name', name)}")
+        key_val = result.get("key", "")
+        if key_val:
+            console.print(f"[bold]Key: {key_val}[/bold]")
+            console.print("[yellow]Save this key — it won't be shown again.[/yellow]")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@keys_app.command("revoke")
+def keys_revoke(
+    key_id: str = typer.Argument(..., help="Key ID to revoke"),
+):
+    """Revoke (delete) an API key."""
+    typer.confirm(f"Revoke API key {key_id[:8]}?", abort=True)
+    try:
+        client.delete(f"/api/keys/{key_id}")
+        console.print(f"[green]Revoked key {key_id[:8]}[/green]")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -208,7 +412,6 @@ def agents_run(
     input_text: str = typer.Option("", "--input", "-i", help="Input text for the agent"),
 ):
     """Run an agent and stream output."""
-    from agentforge.config import get_api_key
 
     console.print(f"[bold]Running agent {agent_id[:8]}...[/bold]")
 
@@ -267,6 +470,106 @@ def agents_create(
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
+
+
+@agents_app.command("show")
+def agents_show(
+    agent_id: str = typer.Argument(..., help="Agent ID"),
+):
+    """Show agent details."""
+    try:
+        agent = client.get(f"/api/agents/{agent_id}")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    console.print()
+    console.print(Panel(
+        f"[bold]{agent['name']}[/bold]\n"
+        f"[dim]ID: {agent['id']}[/dim]\n\n"
+        f"[bold]Description:[/bold] {agent.get('description', '') or '—'}\n"
+        f"[bold]Tools:[/bold] {', '.join(agent.get('tools', [])) or '—'}\n"
+        f"[bold]Steps:[/bold] {len(agent.get('workflow_steps', []))}\n"
+        f"[bold]Template:[/bold] {'Yes' if agent.get('is_template') else 'No'}\n"
+        f"[bold]Created:[/bold] {agent.get('created_at', '')[:10]}",
+        title="Agent Detail",
+    ))
+
+    if agent.get("system_prompt"):
+        console.print(Panel(agent["system_prompt"][:1000], title="System Prompt", border_style="dim"))
+    console.print()
+
+
+@agents_app.command("edit")
+def agents_edit(
+    agent_id: str = typer.Argument(..., help="Agent ID"),
+    name: str = typer.Option("", "--name", "-n", help="New name"),
+    prompt: str = typer.Option("", "--prompt", "-p", help="New system prompt"),
+    description: str = typer.Option("", "--desc", "-d", help="New description"),
+):
+    """Update an agent."""
+    body: dict = {}
+    if name:
+        body["name"] = name
+    if prompt:
+        body["system_prompt"] = prompt
+    if description:
+        body["description"] = description
+
+    if not body:
+        console.print("[red]Provide at least one of --name, --prompt, --desc[/red]")
+        raise typer.Exit(1)
+
+    try:
+        result = client.put(f"/api/agents/{agent_id}", json=body)
+        console.print(f"[green]Updated agent {result['id'][:8]}[/green]")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@agents_app.command("delete")
+def agents_delete(
+    agent_id: str = typer.Argument(..., help="Agent ID to delete"),
+):
+    """Delete an agent."""
+    typer.confirm(f"Delete agent {agent_id[:8]}?", abort=True)
+    try:
+        client.delete(f"/api/agents/{agent_id}")
+        console.print(f"[green]Deleted agent {agent_id[:8]}[/green]")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@agents_app.command("templates")
+def agents_templates():
+    """List agent templates."""
+    try:
+        templates = client.get("/api/agents/templates")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    if not templates:
+        console.print("[dim]No agent templates.[/dim]")
+        return
+
+    table = Table(title="Agent Templates")
+    table.add_column("ID", style="dim", max_width=8)
+    table.add_column("Name", style="bold")
+    table.add_column("Description")
+    table.add_column("Tools")
+
+    for t in templates:
+        table.add_row(
+            t["id"][:8],
+            t["name"],
+            (t.get("description", "") or "")[:50],
+            ", ".join(t.get("tools", [])),
+        )
+
+    console.print(table)
 
 
 @app.command()
@@ -328,7 +631,7 @@ def orchestrate(
                     console.print(f"  [red]✗ Error: {event['data']}[/red]")
 
                 elif event_type == "result":
-                    console.print(f"\n[bold green]Result[/bold green]")
+                    console.print("\n[bold green]Result[/bold green]")
                     console.print(Panel(event["data"], border_style="green"))
                     group_id = event.get("group_id", "")
                     if group_id:
@@ -339,6 +642,171 @@ def orchestrate(
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
+
+
+# --- Orchestrate subcommands ---
+
+orchestrate_app = typer.Typer(help="View orchestration groups and results")
+app.add_typer(orchestrate_app, name="orchestrate-groups")
+
+
+@orchestrate_app.command("status")
+def orchestrate_status(
+    group_id: str = typer.Argument(..., help="Task group ID"),
+):
+    """Show orchestration group status."""
+    try:
+        group = client.get(f"/api/orchestrate/groups/{group_id}")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    status_val = group.get("status", "unknown")
+    color = {"completed": "green", "running": "yellow", "failed": "red"}.get(status_val, "white")
+    console.print()
+    console.print(Panel(
+        f"[bold]Group {group['id'][:8]}[/bold]\n"
+        f"[bold]Status:[/bold] [{color}]{status_val}[/{color}]\n"
+        f"[bold]Objective:[/bold] {group.get('objective', '—')}\n"
+        f"[bold]Tasks:[/bold] {group.get('task_count', 0)}\n"
+        f"[bold]Created:[/bold] {group.get('created_at', '')[:19]}",
+        title="Orchestration Group",
+    ))
+    console.print()
+
+
+@orchestrate_app.command("result")
+def orchestrate_result(
+    group_id: str = typer.Argument(..., help="Task group ID"),
+):
+    """Show orchestration group result."""
+    try:
+        result = client.get(f"/api/orchestrate/groups/{group_id}/result")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    output = result.get("result", result.get("output", ""))
+    if isinstance(output, dict):
+        console.print(Panel(json.dumps(output, indent=2), title="Result", border_style="green"))
+    elif output:
+        console.print(Panel(str(output)[:2000], title="Result", border_style="green"))
+    else:
+        console.print("[dim]No result available yet.[/dim]")
+
+
+@orchestrate_app.command("history")
+def orchestrate_history():
+    """List past orchestration groups."""
+    try:
+        groups = client.get("/api/orchestrate/groups")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    if not groups:
+        console.print("[dim]No orchestration groups.[/dim]")
+        return
+
+    table = Table(title="Orchestration History")
+    table.add_column("ID", style="dim", max_width=8)
+    table.add_column("Objective")
+    table.add_column("Status")
+    table.add_column("Tasks", justify="right")
+    table.add_column("Created", style="dim")
+
+    for g in groups:
+        status_val = g.get("status", "unknown")
+        color = {"completed": "green", "running": "yellow", "failed": "red"}.get(status_val, "white")
+        table.add_row(
+            g["id"][:8],
+            (g.get("objective", "") or "")[:50],
+            f"[{color}]{status_val}[/{color}]",
+            str(g.get("task_count", 0)),
+            g.get("created_at", "")[:10],
+        )
+
+    console.print(table)
+
+
+# --- Runs commands ---
+
+runs_app = typer.Typer(help="View agent runs")
+app.add_typer(runs_app, name="runs")
+
+
+@runs_app.command("list")
+def runs_list():
+    """List agent runs."""
+    try:
+        runs = client.get("/api/runs")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    if not runs:
+        console.print("[dim]No runs found.[/dim]")
+        return
+
+    table = Table(title="Agent Runs")
+    table.add_column("ID", style="dim", max_width=8)
+    table.add_column("Agent", style="bold")
+    table.add_column("Status")
+    table.add_column("Tokens", justify="right")
+    table.add_column("Cost", justify="right")
+    table.add_column("Created", style="dim")
+
+    for r in runs:
+        status_val = r.get("status", "unknown")
+        color = {"completed": "green", "running": "yellow", "failed": "red"}.get(status_val, "white")
+        table.add_row(
+            r["id"][:8],
+            r.get("agent_name", r.get("agent_id", "")[:8]),
+            f"[{color}]{status_val}[/{color}]",
+            f"{r.get('tokens_used', 0):,}",
+            f"${float(r.get('cost', 0)):.4f}",
+            r.get("created_at", "")[:10],
+        )
+
+    console.print(table)
+
+
+@runs_app.command("show")
+def runs_show(
+    run_id: str = typer.Argument(..., help="Run ID"),
+):
+    """Show run details."""
+    try:
+        run = client.get(f"/api/runs/{run_id}")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    status_val = run.get("status", "unknown")
+    color = {"completed": "green", "running": "yellow", "failed": "red"}.get(status_val, "white")
+    console.print()
+    console.print(Panel(
+        f"[bold]Run {run['id'][:8]}[/bold]\n"
+        f"[bold]Agent:[/bold] {run.get('agent_name', run.get('agent_id', '—'))}\n"
+        f"[bold]Status:[/bold] [{color}]{status_val}[/{color}]\n"
+        f"[bold]Tokens:[/bold] {run.get('tokens_used', 0):,}\n"
+        f"[bold]Cost:[/bold] ${float(run.get('cost', 0)):.4f}\n"
+        f"[bold]Steps:[/bold] {run.get('current_step', 0)}/{run.get('total_steps', 0)}\n"
+        f"[bold]Created:[/bold] {run.get('created_at', '')[:19]}",
+        title="Run Detail",
+    ))
+
+    if run.get("output"):
+        output = run["output"]
+        if isinstance(output, dict):
+            console.print(Panel(json.dumps(output, indent=2), title="Output", border_style="green"))
+        else:
+            console.print(Panel(str(output)[:2000], title="Output", border_style="green"))
+
+    if run.get("error"):
+        console.print(Panel(str(run["error"]), title="Error", border_style="red"))
+
+    console.print()
 
 
 blueprints_app = typer.Typer(help="Manage blueprints")
@@ -403,6 +871,66 @@ def blueprints_templates():
         )
 
     console.print(table)
+
+
+@blueprints_app.command("create")
+def blueprints_create(
+    name: str = typer.Option(..., "--name", "-n", help="Blueprint name"),
+    description: str = typer.Option("", "--desc", "-d", help="Description"),
+):
+    """Create a new blueprint."""
+    try:
+        result = client.post("/api/blueprints", json={
+            "name": name,
+            "description": description,
+        })
+        console.print(f"[green]Created blueprint:[/green] {result['name']} ({result['id'][:8]})")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@blueprints_app.command("show")
+def blueprints_show(
+    blueprint_id: str = typer.Argument(..., help="Blueprint ID"),
+    as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+):
+    """Show blueprint detail."""
+    try:
+        bp = client.get(f"/api/blueprints/{blueprint_id}")
+        if as_json:
+            console.print_json(json.dumps(bp))
+            return
+        console.print()
+        console.print(f"[bold]{bp.get('name', 'Unnamed')}[/bold]  [dim]{bp['id'][:8]}[/dim]")
+        console.print(f"  Description: {bp.get('description', '-')}")
+        nodes = bp.get("nodes", [])
+        console.print(f"  Nodes:       {len(nodes)}")
+        for n in nodes:
+            ntype = n.get("type", "?")
+            tag = "[blue][DET][/blue]" if ntype not in ("agent", "agent_spawn", "agent_prompt") else "[magenta][AGT][/magenta]"
+            console.print(f"    {tag} {n.get('id', '?')}: {ntype}")
+        edges = bp.get("edges", [])
+        if edges:
+            console.print(f"  Edges:       {len(edges)}")
+        console.print()
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@blueprints_app.command("delete")
+def blueprints_delete(
+    blueprint_id: str = typer.Argument(..., help="Blueprint ID to delete"),
+):
+    """Delete a blueprint."""
+    typer.confirm(f"Delete blueprint {blueprint_id[:8]}?", abort=True)
+    try:
+        client.delete(f"/api/blueprints/{blueprint_id}")
+        console.print(f"[green]Deleted blueprint {blueprint_id[:8]}[/green]")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
 
 
 @blueprints_app.command("inspect")
@@ -496,7 +1024,7 @@ def blueprints_run(
 
                 elif event_type == "result":
                     d = event.get("data", {})
-                    console.print(f"\n[bold green]Blueprint complete[/bold green]")
+                    console.print("\n[bold green]Blueprint complete[/bold green]")
                     output = d.get("output", "")
                     if isinstance(output, dict):
                         console.print(Panel(json.dumps(output, indent=2), border_style="green"))
@@ -625,7 +1153,7 @@ def costs(
     console.print(f"  Output tokens: {summary['total_output_tokens']:,}")
     console.print(f"  Requests:      {summary['request_count']}")
     console.print()
-    console.print(f"[bold]Monthly Projection[/bold]")
+    console.print("[bold]Monthly Projection[/bold]")
     console.print(f"  Daily avg:     ${projection['daily_average']:.4f}")
     console.print(f"  Monthly est:   [yellow]${projection['monthly_projection']:.2f}[/yellow]")
     console.print()
@@ -959,6 +1487,79 @@ def triggers_toggle(
         raise typer.Exit(1)
 
 
+@triggers_app.command("edit")
+def triggers_edit(
+    trigger_id: str = typer.Argument(..., help="Trigger ID to update"),
+    config: str = typer.Option("", "--config", "-c", help="JSON config string"),
+    enabled: bool = typer.Option(None, "--enabled/--disabled", help="Enable or disable"),
+):
+    """Update a trigger."""
+    body: dict = {}
+    if config:
+        body["config"] = json.loads(config)
+    if enabled is not None:
+        body["enabled"] = enabled
+
+    if not body:
+        console.print("[red]Provide at least one of --config, --enabled/--disabled[/red]")
+        raise typer.Exit(1)
+
+    try:
+        result = client.put(f"/api/triggers/{trigger_id}", json=body)
+        console.print(f"[green]Updated trigger {result['id'][:8]}[/green]")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@triggers_app.command("delete")
+def triggers_delete(
+    trigger_id: str = typer.Argument(..., help="Trigger ID to delete"),
+):
+    """Delete a trigger."""
+    typer.confirm(f"Delete trigger {trigger_id[:8]}?", abort=True)
+    try:
+        client.delete(f"/api/triggers/{trigger_id}")
+        console.print(f"[green]Deleted trigger {trigger_id[:8]}[/green]")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@triggers_app.command("history")
+def triggers_history(
+    trigger_id: str = typer.Argument(..., help="Trigger ID"),
+):
+    """Show trigger firing history."""
+    try:
+        history = client.get(f"/api/triggers/{trigger_id}/history")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    if not history:
+        console.print("[dim]No firing history.[/dim]")
+        return
+
+    table = Table(title=f"Trigger {trigger_id[:8]} History")
+    table.add_column("Fired At", style="dim")
+    table.add_column("Status")
+    table.add_column("Run ID", style="dim", max_width=8)
+    table.add_column("Detail")
+
+    for h in history:
+        status_val = h.get("status", "unknown")
+        color = {"success": "green", "failed": "red", "skipped": "yellow"}.get(status_val, "white")
+        table.add_row(
+            h.get("fired_at", "")[:19],
+            f"[{color}]{status_val}[/{color}]",
+            (h.get("run_id", "") or "")[:8],
+            (h.get("detail", "") or "")[:50],
+        )
+
+    console.print(table)
+
+
 # --- Eval commands ---
 
 evals_app = typer.Typer(help="Manage eval suites and runs")
@@ -1007,7 +1608,7 @@ def evals_run(
         if model:
             body["model"] = model
         result = client.post(f"/api/evals/suites/{suite_id}/run", json=body)
-        console.print(f"[green]Eval complete![/green]")
+        console.print("[green]Eval complete![/green]")
         console.print(f"  Pass rate: {result.get('pass_rate', 0) * 100:.0f}%")
         console.print(f"  Avg score: {result.get('avg_score', 0):.2f}")
         console.print(f"  Passed: {result.get('passed_cases', 0)}/{result.get('total_cases', 0)}")
@@ -1056,6 +1657,45 @@ def evals_compare(
             table.add_row(c["case_id"][:8], f"[{color}]{status}[/{color}]", score_a, score_b, diff)
 
         console.print(table)
+
+
+@evals_app.command("create")
+def evals_create(
+    name: str = typer.Option(..., "--name", "-n", help="Suite name"),
+    target_type: str = typer.Option(..., "--target-type", "-t", help="Target type: agent or blueprint"),
+    target_id: str = typer.Option(..., "--target-id", help="Target agent/blueprint ID"),
+):
+    """Create a new eval suite."""
+    try:
+        result = client.post("/api/evals/suites", json={
+            "name": name,
+            "target_type": target_type,
+            "target_id": target_id,
+        })
+        console.print(f"[green]Created eval suite:[/green] {result['name']} ({result['id'][:8]})")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@evals_app.command("add-case")
+def evals_add_case(
+    suite_id: str = typer.Argument(..., help="Suite ID"),
+    name: str = typer.Option(..., "--name", "-n", help="Test case name"),
+    input_text: str = typer.Option(..., "--input", "-i", help="Input text"),
+    expected: str = typer.Option(..., "--expected", "-e", help="Expected output"),
+):
+    """Add a test case to an eval suite."""
+    try:
+        result = client.post(f"/api/evals/suites/{suite_id}/cases", json={
+            "name": name,
+            "input": input_text,
+            "expected_output": expected,
+        })
+        console.print(f"[green]Added case:[/green] {result.get('name', name)} ({result['id'][:8]})")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
 
 
 # --- Approval commands ---
@@ -1211,7 +1851,7 @@ def traces_stats():
 
     by_type = stats.get("by_type", {})
     if by_type:
-        console.print(f"\n[bold]By type:[/bold]")
+        console.print("\n[bold]By type:[/bold]")
         for span_type, count in sorted(by_type.items(), key=lambda x: x[1], reverse=True):
             console.print(f"  {span_type}: {count}")
     console.print()
@@ -1241,15 +1881,15 @@ def traces_get(
     console.print(f"  Latency: {tree.get('latency_ms', 0):.0f}ms")
 
     if tree.get("input_preview"):
-        console.print(f"\n[bold]Input:[/bold]")
+        console.print("\n[bold]Input:[/bold]")
         console.print(Panel(tree["input_preview"][:500], border_style="dim"))
 
     if tree.get("output_preview"):
-        console.print(f"\n[bold]Output:[/bold]")
+        console.print("\n[bold]Output:[/bold]")
         console.print(Panel(tree["output_preview"][:500], border_style="green"))
 
     if tree.get("error_message"):
-        console.print(f"\n[bold red]Error:[/bold red]")
+        console.print("\n[bold red]Error:[/bold red]")
         console.print(Panel(tree["error_message"], border_style="red"))
 
     children = tree.get("children", [])
@@ -1464,7 +2104,7 @@ def knowledge_search(
     top_k: int = typer.Option(5, "--top-k", "-k", help="Number of results"),
 ):
     """Search a knowledge collection."""
-    console.print(f"[dim]Searching...[/dim]")
+    console.print("[dim]Searching...[/dim]")
     try:
         results = client.post(f"/api/knowledge/collections/{collection_id}/search", json={
             "query": query,
@@ -1483,6 +2123,70 @@ def knowledge_search(
         content = r.get("content", "")[:200]
         console.print(f"\n[bold]#{i}[/bold] ({sim:.1f}% match)")
         console.print(Panel(content, border_style="dim"))
+
+
+@knowledge_app.command("delete")
+def knowledge_delete(
+    collection_id: str = typer.Argument(..., help="Collection ID to delete"),
+):
+    """Delete a knowledge collection."""
+    typer.confirm(f"Delete collection {collection_id[:8]}?", abort=True)
+    try:
+        client.delete(f"/api/knowledge/collections/{collection_id}")
+        console.print(f"[green]Deleted collection {collection_id[:8]}[/green]")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@knowledge_app.command("documents")
+def knowledge_documents(
+    collection_id: str = typer.Argument(..., help="Collection ID"),
+):
+    """List documents in a collection."""
+    try:
+        docs = client.get(f"/api/knowledge/collections/{collection_id}/documents")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    if not docs:
+        console.print("[dim]No documents in this collection.[/dim]")
+        return
+
+    table = Table(title="Documents")
+    table.add_column("ID", style="dim", max_width=8)
+    table.add_column("Filename", style="bold")
+    table.add_column("Chunks", justify="right")
+    table.add_column("Status")
+    table.add_column("Added", style="dim")
+
+    for d in docs:
+        status_val = d.get("status", "unknown")
+        color = {"ready": "green", "processing": "yellow", "error": "red"}.get(status_val, "white")
+        table.add_row(
+            d["id"][:8],
+            d.get("filename", ""),
+            str(d.get("chunk_count", 0)),
+            f"[{color}]{status_val}[/{color}]",
+            d.get("created_at", "")[:10],
+        )
+
+    console.print(table)
+
+
+@knowledge_app.command("remove-doc")
+def knowledge_remove_doc(
+    document_id: str = typer.Argument(..., help="Document ID to remove"),
+):
+    """Remove a document from its collection."""
+    typer.confirm(f"Remove document {document_id[:8]}?", abort=True)
+    try:
+        client.delete(f"/api/knowledge/documents/{document_id}")
+        console.print(f"[green]Removed document {document_id[:8]}[/green]")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
 
 
 # --- Marketplace commands ---
@@ -1588,6 +2292,46 @@ def marketplace_fork(
             "forked_blueprint_id": blueprint_id,
         })
         console.print(f"[green]Forked {listing_id[:8]}[/green] → {result.get('forked_blueprint_id', blueprint_id)[:8]}")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@marketplace_app.command("show")
+def marketplace_show(
+    listing_id: str = typer.Argument(..., help="Listing ID"),
+):
+    """Show marketplace listing details."""
+    try:
+        li = client.get(f"/api/marketplace/listings/{listing_id}")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    rating = f"{li.get('rating_avg', 0):.1f}/5 ({li.get('rating_count', 0)} ratings)"
+    console.print()
+    console.print(Panel(
+        f"[bold]{li['title']}[/bold]\n"
+        f"[dim]ID: {li['id']}[/dim]\n\n"
+        f"[bold]Category:[/bold] {li.get('category', '—')}\n"
+        f"[bold]Version:[/bold] {li.get('version', '—')}\n"
+        f"[bold]Rating:[/bold] {rating}\n"
+        f"[bold]Forks:[/bold] {li.get('fork_count', 0)}\n"
+        f"[bold]Description:[/bold] {li.get('description', '') or '—'}",
+        title="Marketplace Listing",
+    ))
+    console.print()
+
+
+@marketplace_app.command("unpublish")
+def marketplace_unpublish(
+    listing_id: str = typer.Argument(..., help="Listing ID to unpublish"),
+):
+    """Unpublish a marketplace listing."""
+    typer.confirm(f"Unpublish listing {listing_id[:8]}?", abort=True)
+    try:
+        client.delete(f"/api/marketplace/listings/{listing_id}")
+        console.print(f"[green]Unpublished listing {listing_id[:8]}[/green]")
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
@@ -1736,7 +2480,7 @@ def cu_status():
     ]:
         available = report.get(avail_key, False)
         version = report.get(ver_key, "")
-        status = f"[green]Installed[/green]" if available else "[red]Missing[/red]"
+        status = "[green]Installed[/green]" if available else "[red]Missing[/red]"
         table.add_row(name, status, version)
 
     table.add_row(
@@ -1799,7 +2543,7 @@ def cu_click(
 ):
     """Click at coordinates."""
     try:
-        result = client.post("/api/blueprints/node-exec", json={
+        client.post("/api/blueprints/node-exec", json={
             "node_type": "steer_click",
             "config": {"x": x, "y": y},
         })
@@ -2133,6 +2877,143 @@ def recordings_cleanup(older_than: int = typer.Option(30, "--older-than", help="
             os.remove(path)
             removed += 1
     console.print(f"[green]Removed {removed} recordings older than {older_than} days.[/green]")
+
+
+@recordings_app.command("download")
+def recordings_download(
+    run_id: str = typer.Argument(..., help="Run ID of the recording"),
+    output: str = typer.Option("", "--output", "-o", help="Output file path"),
+):
+    """Download a recording to a local file."""
+    import os
+    import shutil
+
+    storage = os.getenv("AF_RECORDING_STORAGE", "/tmp/agentforge-recordings")
+    source = None
+    if os.path.exists(storage):
+        for f in os.listdir(storage):
+            if run_id in f:
+                source = os.path.join(storage, f)
+                break
+
+    if not source:
+        console.print(f"[red]No recording found for run {run_id}[/red]")
+        raise typer.Exit(1)
+
+    dest = output if output else os.path.basename(source)
+    shutil.copy2(source, dest)
+    size = os.path.getsize(dest) / 1024 / 1024
+    console.print(f"[green]Downloaded to {dest} ({size:.1f} MB)[/green]")
+
+
+@app.command()
+def logout():
+    """Clear stored credentials."""
+    ensure_config()
+    if CONFIG_FILE.exists():
+        lines = []
+        for line in CONFIG_FILE.read_text().splitlines():
+            if line.strip().startswith("api_key "):
+                lines.append('api_key = ""')
+            else:
+                lines.append(line)
+        CONFIG_FILE.write_text("\n".join(lines) + "\n")
+    console.print("[green]Logged out — API key cleared.[/green]")
+
+
+tools_app = typer.Typer(help="List available tools (built-in and MCP)")
+app.add_typer(tools_app, name="tools")
+
+
+@tools_app.command("list")
+def tools_list():
+    """List all available tools (built-in + MCP)."""
+    try:
+        data = client.get("/api/tools")
+        tools = data if isinstance(data, list) else data.get("tools", [])
+        table = Table(title="Available Tools")
+        table.add_column("Name", style="cyan")
+        table.add_column("Source")
+        table.add_column("Description", max_width=50)
+        for t in tools:
+            source = t.get("source", t.get("server_name", "built-in"))
+            table.add_row(t.get("name", "?"), source, t.get("description", ""))
+        console.print(table)
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command()
+def compare(
+    prompt: str = typer.Argument(..., help="Prompt to compare across models"),
+    models: str = typer.Option(..., "--models", "-m", help="Comma-separated model names"),
+    system_prompt: str = typer.Option("", "--system", "-s", help="System prompt"),
+):
+    """Compare responses across multiple models."""
+    model_list = [m.strip() for m in models.split(",")]
+    try:
+        result = client.post("/api/compare", json={
+            "prompt": prompt,
+            "models": model_list,
+            "system_prompt": system_prompt,
+        })
+        table = Table(title="Model Comparison")
+        table.add_column("Model", style="cyan")
+        table.add_column("Latency")
+        table.add_column("Tokens")
+        table.add_column("Cost")
+        table.add_column("Response", max_width=60)
+        for r in result.get("results", []):
+            table.add_row(
+                r.get("model", "?"),
+                f"{r.get('latency_ms', 0)}ms",
+                str(r.get("total_tokens", "?")),
+                f"${r.get('cost', 0):.4f}",
+                (r.get("response", "")[:60] + "...") if len(r.get("response", "")) > 60 else r.get("response", ""),
+            )
+        console.print(table)
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command()
+def trace(
+    run_id: str = typer.Argument(..., help="Run ID to trace"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show full event data"),
+):
+    """Show execution trace for a run (alias for traces get)."""
+    try:
+        data = client.get(f"/api/traces/{run_id}")
+        spans = data.get("spans", [data] if "span_type" in data else [])
+        if not spans:
+            console.print("[yellow]No trace data found.[/yellow]")
+            return
+        console.print(f"\n[bold]Trace for run {run_id[:8]}[/bold]\n")
+        type_colors = {
+            "agent_step": "magenta", "llm_call": "cyan", "tool_call": "green",
+            "node_execution": "blue", "blueprint_step": "yellow",
+        }
+        for s in spans:
+            stype = s.get("span_type", "?")
+            color = type_colors.get(stype, "white")
+            status = s.get("status", "?")
+            status_icon = {"completed": "[green]✓[/green]", "error": "[red]✗[/red]", "running": "[blue]●[/blue]"}.get(status, status)
+            duration = f" ({s.get('duration_ms', '?')}ms)" if s.get("duration_ms") else ""
+            tokens = f" [{s.get('total_tokens', '')} tok]" if s.get("total_tokens") else ""
+            console.print(f"  {status_icon} [{color}]{stype}[/{color}] {s.get('name', '')}{duration}{tokens}")
+            if verbose:
+                if s.get("input"):
+                    console.print(f"      [dim]Input:[/dim] {str(s['input'])[:200]}")
+                if s.get("output"):
+                    console.print(f"      [dim]Output:[/dim] {str(s['output'])[:200]}")
+                if s.get("error"):
+                    console.print(f"      [red]Error: {s['error']}[/red]")
+        console.print()
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":
