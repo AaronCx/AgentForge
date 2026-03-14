@@ -260,8 +260,9 @@ def test_cost_projection(auth_client):
 
 def test_provider_models(auth_client):
     """6.2 — Model listing."""
-    with patch("app.routers.providers.provider_registry") as mock_reg:
-        mock_reg.list_all_models = AsyncMock(return_value=[])
+    mock_reg = MagicMock()
+    mock_reg.list_all_models = AsyncMock(return_value=[])
+    with patch("app.routers.providers.create_user_registry", new_callable=AsyncMock, return_value=mock_reg):
         response = auth_client.get(
             "/api/providers/models",
             headers={"Authorization": "Bearer test-token"},
@@ -271,8 +272,9 @@ def test_provider_models(auth_client):
 
 def test_provider_health(auth_client):
     """6.3 — Provider health."""
-    with patch("app.routers.providers.provider_registry") as mock_reg:
-        mock_reg.health_check_all = AsyncMock(return_value=[])
+    mock_reg = MagicMock()
+    mock_reg.health_check_all = AsyncMock(return_value=[])
+    with patch("app.routers.providers.create_user_registry", new_callable=AsyncMock, return_value=mock_reg):
         response = auth_client.get(
             "/api/providers/health",
             headers={"Authorization": "Bearer test-token"},
