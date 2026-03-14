@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.database import supabase
-from app.providers.registry import create_user_registry, provider_registry
+from app.providers.registry import create_user_registry
 from app.routers.auth import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ class ModelResponse(BaseModel):
 
 
 @router.post("/providers/configs")
-async def save_provider_config(config: ProviderConfigCreate, user=Depends(get_current_user)):
+async def save_provider_config(config: ProviderConfigCreate, user=Depends(get_current_user)):  # noqa: B008
     """Save or update a user's provider configuration."""
     data = {
         "user_id": user.id,
@@ -64,7 +64,7 @@ async def save_provider_config(config: ProviderConfigCreate, user=Depends(get_cu
 
 
 @router.get("/providers/configs")
-async def list_provider_configs(user=Depends(get_current_user)):
+async def list_provider_configs(user=Depends(get_current_user)):  # noqa: B008
     """List user's provider configs (keys masked)."""
     result = supabase.table("provider_configs").select("*").eq("user_id", user.id).execute()
     configs = result.data or []
@@ -79,7 +79,7 @@ async def list_provider_configs(user=Depends(get_current_user)):
 
 
 @router.delete("/providers/configs/{provider}")
-async def delete_provider_config(provider: str, user=Depends(get_current_user)):
+async def delete_provider_config(provider: str, user=Depends(get_current_user)):  # noqa: B008
     """Delete a user's provider configuration."""
     supabase.table("provider_configs").delete().eq("user_id", user.id).eq("provider", provider).execute()
     return {"ok": True}
