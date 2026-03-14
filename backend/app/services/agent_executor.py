@@ -65,7 +65,7 @@ class AgentRunner:
         if not api_key:
             return None
 
-        self._llm = ChatOpenAI(  # type: ignore[call-arg]
+        self._llm = ChatOpenAI(  # type: ignore[call-arg, assignment]
             model=self.model,
             temperature=0,
             streaming=True,

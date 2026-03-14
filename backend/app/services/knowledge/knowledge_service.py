@@ -89,7 +89,7 @@ class KnowledgeService:
                 .execute()
             )
             if result.data and result.data.get("api_key_encrypted"):
-                return result.data["api_key_encrypted"]
+                return str(result.data["api_key_encrypted"])
         except Exception:
             pass
         return None
