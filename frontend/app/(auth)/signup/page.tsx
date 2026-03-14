@@ -35,7 +35,7 @@ export default function SignupPage() {
   async function handleGitHubLogin() {
     await supabase.auth.signInWithOAuth({
       provider: "github",
-      options: { redirectTo: `${window.location.origin}/dashboard` },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
   }
 

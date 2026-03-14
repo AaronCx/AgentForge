@@ -126,9 +126,9 @@ export default function DashboardLayout({
 
   async function handleLogout() {
     document.cookie = "agentforge_demo=; max-age=0; path=/";
-    await supabase.auth.signOut();
     document.cookie = "sb-access-token=; max-age=0; path=/";
-    router.push("/login");
+    await supabase.auth.signOut();
+    window.location.href = "/login";
   }
 
   const logo = (
