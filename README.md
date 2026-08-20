@@ -4,8 +4,8 @@
 
 Build AI-powered workflows that chain LLM reasoning with deterministic logic, automate any desktop or terminal, and orchestrate multiple agents in parallel. Visual DAG editor with 45 node types, cross-platform computer use, multi-model provider support, and real-time execution streaming. Runs fully local with SQLite (zero external accounts) or scales to cloud with Supabase.
 
-![Version](https://img.shields.io/badge/version-3.0.0-blue)
-![Tests](https://img.shields.io/badge/tests-977_passing-brightgreen)
+[![Release](https://img.shields.io/github/v/release/AaronCx/Forge)](https://github.com/AaronCx/Forge/releases/latest)
+[![CI](https://github.com/AaronCx/Forge/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AaronCx/Forge/actions/workflows/ci.yml)
 ![Next.js](https://img.shields.io/badge/Next.js-15-black)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.138-teal)
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
@@ -190,7 +190,7 @@ graph TB
 | CLI | Typer, Rich, httpx |
 | Database | SQLite (default, zero config) or PostgreSQL via Supabase |
 | Auth | Local JWT (default) or Supabase Auth (email + GitHub OAuth) |
-| Testing | pytest (868 tests), vitest + testing-library (60 tests) |
+| Testing | pytest, vitest + testing-library |
 | Deployment | Vercel (frontend), Render (backend) |
 | CI/CD | GitHub Actions (Ruff, mypy, pytest, ESLint, tsc, vitest) |
 
@@ -444,15 +444,14 @@ forge keys list                        # API key management
 ## Testing
 
 ```bash
-# Backend (917 tests)
+# Backend
 cd backend && source .venv/bin/activate
 pytest tests/ -v --cov=app
 
-# Frontend (60 tests)
+# Frontend
 cd frontend && npx vitest run
 
 # Or use the Makefile
-# (the tests badge counts backend 917 + frontend 60 = 977)
 make test
 
 # Parity safety net — freezes current node + agent behavior so refactors
@@ -487,7 +486,7 @@ Forge/
 │   │           ├── drive/       # Terminal automation
 │   │           ├── linux/       # xdotool/tesseract fallback
 │   │           └── windows/     # pyautogui/PowerShell fallback
-│   └── tests/                   # 868 tests (incl. the golden parity safety net)
+│   └── tests/                   # Backend tests (incl. the golden parity safety net)
 ├── cli/                         # Typer + Rich CLI (35+ command groups, incl. chat)
 ├── scripts/                     # Bootstrap, Steer/Drive CLIs, OCR helper
 ├── supabase/migrations/         # 28 SQL migrations (cloud mode only)
