@@ -1,4 +1,9 @@
 # Forge
+> **Archived (August 2026). Forge is superseded by [monad](https://github.com/AaronCx/monad).**
+> monad is one daemon for agentic coding and PR review, provider-agnostic via the Agent Client
+> Protocol. Forge's provider-neutral agent loop (`forge-kernel`) and its test suite were carried
+> forward as monad's engine spec. This repository is read-only and kept for history. The
+> hosted demo may go offline at any time.
 
 **Agentic AI orchestration platform — design workflows visually, automate GUIs and terminals, and coordinate agents across machines.**
 
