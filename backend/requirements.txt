@@ -1,15 +1,15 @@
-fastapi==0.138.2
-uvicorn[standard]==0.49.0
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
 openai==2.44.0
-python-dotenv==1.2.2
+python-dotenv==1.2.3
 python-multipart==0.0.32
 pydantic==2.13.4
 httpx==0.28.1
-pypdf==6.14.2
+pypdf==6.16.1
 python-docx==1.2.0
 slowapi==0.1.10
-anthropic==0.115.0
-tiktoken==0.13.0
+anthropic==0.123.0
+tiktoken==0.14.0
 croniter==5.0.1
 # Database backends (SQLite is default, Supabase is optional)
 aiosqlite>=0.20.0
